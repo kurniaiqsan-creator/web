@@ -40,8 +40,13 @@
                         }
                         $rowLabels = array_keys($rows);
                         sort($rowLabels);
+                        $catNames = [];
+                        foreach ($categories as $cat) {
+                            $catNames[(int)$cat['id']] = $cat['name'];
+                        }
                         $seatW = 26; $seatH = 26; $gap = 3;
                         foreach ($seats as $s):
+                            $catName = $catNames[(int)($s['category_id'] ?? 0)] ?? '';
                             $x = ($s['col_number'] - 1) * ($seatW + $gap) + $gap + 25;
                             $y = (array_search($s['row_label'], $rowLabels)) * ($seatH + $gap) + $gap + 10;
                             $colors = [
@@ -57,7 +62,8 @@
                                   data-seat="<?= View::e($s['seat_label']) ?>"
                                   data-status="<?= $s['status'] ?>"
                                   data-price="<?= $s['price_cents'] ?>"
-                                  onclick="seatMap().toggleSeat('<?= View::e($s['seat_label']) ?>', <?= $s['price_cents'] ?>, '<?= $s['status'] ?>')"
+                                  data-category="<?= View::e($catName) ?>"
+                                  onclick="window.seatMapInstance && window.seatMapInstance.toggleSeat('<?= View::e($s['seat_label']) ?>', <?= $s['price_cents'] ?>, '<?= $s['status'] ?>', '<?= View::e($catName) ?>', <?= (int)($s['category_id'] ?? 0) ?>)"
                             />
                             <text x="<?= $x + $seatW/2 ?>" y="<?= $y + $seatH/2 ?>" text-anchor="middle" dominant-baseline="central"
                                   class="text-[7px] font-medium pointer-events-none <?= $s['status'] === 'available' ? 'fill-gray-600' : 'fill-white' ?>">
@@ -88,7 +94,7 @@
             </div>
 
             <!-- Order Panel -->
-            <div class="card p-4 sm:p-5" x-data>
+            <div class="card p-4 sm:p-5">
                 <h3 class="font-semibold">Pesanan Kamu</h3>
 
                 <template x-if="selectedSeats.length === 0 && !holdActive">
@@ -121,7 +127,7 @@
 
                         <template x-if="holdActive">
                             <div class="space-y-2">
-                                <a href="checkout" class="btn btn-primary btn-lg w-full no-underline">Lanjut ke Checkout</a>
+                                <button class="btn btn-primary btn-lg w-full" @click="goToCheckout()">Lanjut ke Checkout</button>
                                 <button class="w-full text-center text-xs text-gray-500 hover:text-gray-700" @click="releaseHold()">
                                     Batalkan pesanan
                                 </button>
@@ -144,24 +150,42 @@ function seatMap() {
         timerDisplay: '05:00',
         loading: false,
         timerInterval: null,
+        holdId: null,
         tenantSlug: '<?= View::e($tenant['slug'] ?? '') ?>',
         eventId: <?= (int)($event['id'] ?? 0) ?>,
+        eventTitle: '<?= View::e($event['title'] ?? '') ?>',
+        venueName: '<?= View::e($event['venue_name'] ?? '') ?>',
+        eventDate: '<?= View::e(View::formatDate($event['start_time'] ?? 'now')) ?>',
 
         init() {
             window.seatMapInstance = this;
         },
-        toggleSeat(label, price, status) {
+        toggleSeat(label, price, status, category, categoryId) {
             if (status !== 'available' || this.holdActive) return;
             const idx = this.selectedSeats.findIndex(s => s.label === label);
             if (idx >= 0) {
                 this.selectedSeats.splice(idx, 1);
                 this.totalPrice -= price;
-                document.querySelectorAll('.seat-rect[data-seat="'+label+'"]').forEach(r => r.classList.remove('fill-brand-500','stroke-brand-600'));
+                document.querySelectorAll('.seat-rect[data-seat="'+label+'"]').forEach(r => {r.classList.remove('fill-brand-500','stroke-brand-600'); r.classList.add('fill-emerald-400','stroke-emerald-500');});
             } else {
-                this.selectedSeats.push({label, price});
+                this.selectedSeats.push({label, price, category: category || '', categoryId: categoryId || null});
                 this.totalPrice += price;
                 document.querySelectorAll('.seat-rect[data-seat="'+label+'"]').forEach(r => {r.classList.add('fill-brand-500','stroke-brand-600'); r.classList.remove('fill-emerald-400','stroke-emerald-500');});
             }
+        },
+        goToCheckout() {
+            const cart = {
+                tenantSlug: this.tenantSlug,
+                eventId: this.eventId,
+                eventTitle: this.eventTitle,
+                venueName: this.venueName,
+                eventDate: this.eventDate,
+                seatHoldId: this.holdId,
+                seats: this.selectedSeats,
+                totalPrice: this.totalPrice,
+            };
+            sessionStorage.setItem('visi_cart', JSON.stringify(cart));
+            window.location.href = base_url('/' + this.tenantSlug + '/events/' + this.eventId + '/checkout');
         },
         async reserveSeats() {
             if (this.selectedSeats.length === 0) return showToast('Pilih kursi terlebih dahulu', 'error');
@@ -185,6 +209,7 @@ function seatMap() {
                     return;
                 }
                 if (data.seat_hold_id) {
+                    this.holdId = data.seat_hold_id;
                     this.holdActive = true;
                     this.startTimer(300);
                     showToast('Kursi berhasil dipesan! Selesaikan checkout dalam 5 menit.', 'success');

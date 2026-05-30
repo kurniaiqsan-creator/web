@@ -7,17 +7,14 @@
                 <div class="text-center mb-4">
                     <h1 class="text-lg font-bold"><?= View::e($ticket['event_title']) ?></h1>
                     <div class="mt-2 flex items-center justify-center gap-3 text-xs text-gray-500">
-                        <span><?= View::formatDate($ticket['issued_at'] ?? '') ?></span>
+                        <span><?= View::formatDate($ticket['start_time'] ?? $ticket['issued_at'] ?? '') ?></span>
                         <span><?= View::e($ticket['venue_name']) ?></span>
                     </div>
                 </div>
 
                 <div class="flex justify-center mb-4">
-                    <div class="flex h-44 w-44 items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white">
-                        <div class="text-center text-gray-400">
-                            <svg class="mx-auto h-10 w-10" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zm0 9.75c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zm9.75-9.75c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/></svg>
-                            <p class="mt-1 text-[10px] font-mono"><?= substr(View::e($ticket['ticket_token']), 0, 12) ?>...</p>
-                        </div>
+                    <div class="rounded-xl border bg-white p-3">
+                        <div id="qr-code" data-url="<?= View::e(base_url('/t/' . $ticket['ticket_token'])) ?>"></div>
                     </div>
                 </div>
 
@@ -47,4 +44,11 @@
         <p class="mt-4 text-center text-xs text-gray-400">Tunjukkan QR code ini saat masuk venue</p>
     </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('qr-code');
+        if (el) new QRCode(el, { text: el.dataset.url, width: 176, height: 176, correctLevel: QRCode.CorrectLevel.M });
+    });
+</script>
 <?php $content = ob_get_clean(); require VIEW_PATH . '/layouts/main.php'; ?>

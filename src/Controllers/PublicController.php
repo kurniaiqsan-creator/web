@@ -72,16 +72,39 @@ class PublicController
     public function confirmation(string $tenantSlug, string $eventSlug): string
     {
         $tenant = Database::fetch('SELECT * FROM tenants WHERE slug = ?', [$tenantSlug]);
+        if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
+
+        $orderCode = $_GET['order'] ?? '';
+        $order = $orderCode ? Database::fetch(
+            'SELECT * FROM orders WHERE order_code = ? AND tenant_id = ?',
+            [$orderCode, $tenant['id']]
+        ) : null;
+
+        $tickets = [];
+        if ($order) {
+            $tickets = Database::fetchAll(
+                "SELECT t.*, e.title as event_title, e.start_time, v.name as venue_name
+                 FROM tickets t
+                 JOIN events e ON t.event_id = e.id
+                 JOIN venues v ON e.venue_id = v.id
+                 WHERE t.order_id = ? ORDER BY t.id ASC",
+                [$order['id']]
+            );
+        }
+
         return View::render('public/confirmation', [
-            'title' => 'Konfirmasi', 'tenant' => $tenant,
-            'orderCode' => $_GET['order'] ?? 'ORD-000789',
+            'title'     => 'Konfirmasi',
+            'tenant'    => $tenant,
+            'order'     => $order,
+            'orderCode' => $order['order_code'] ?? $orderCode,
+            'tickets'   => $tickets,
         ]);
     }
 
     public function eticket(string $token): string
     {
         $ticket = Database::fetch(
-            "SELECT t.*, o.order_code, e.title as event_title, v.name as venue_name
+            "SELECT t.*, o.order_code, e.title as event_title, e.start_time, v.name as venue_name
              FROM tickets t JOIN orders o ON t.order_id = o.id
              JOIN events e ON t.event_id = e.id JOIN venues v ON e.venue_id = v.id
              WHERE t.ticket_token = ?", [$token]
