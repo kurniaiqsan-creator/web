@@ -5,6 +5,17 @@ declare(strict_types=1);
 define('BASE_PATH', dirname(__DIR__));
 define('VIEW_PATH', BASE_PATH . '/views');
 define('CONFIG_PATH', BASE_PATH . '/config');
+define('BASE_URL', rtrim((string)(getenv('APP_BASE_URL') ?: ''), '/'));
+
+if (!function_exists('base_url')) {
+    function base_url(string $path = ''): string
+    {
+        if ($path === '') {
+            return BASE_URL === '' ? '/' : BASE_URL;
+        }
+        return BASE_URL . '/' . ltrim($path, '/');
+    }
+}
 
 // Autoload sederhana
 spl_autoload_register(function (string $class): void {
@@ -78,12 +89,10 @@ $router->get('/logout', function () {
     return (new AuthController())->logout();
 });
 
+// Onboarding publik dinonaktifkan untuk Phase 1 (single-tenant MVP).
+// Endpoint API tetap tersedia di /api/v1/tenants untuk admin/seeding.
 $router->get('/onboarding', function () {
-    return (new PublicController())->onboarding();
-});
-
-$router->post('/onboarding', function () {
-    return (new ApiController())->createTenant();
+    Router::redirect('/login');
 });
 
 // ===== E-TICKET (harus sebelum /{tenantSlug}) =====
@@ -98,6 +107,8 @@ $router->group('/admin', function (Router $r) {
     $r->get('/events/create', [AdminController::class, 'eventEditor']);
     $r->get('/events/{id}', [AdminController::class, 'eventEditor']);
     $r->get('/orders', [AdminController::class, 'orders']);
+    $r->get('/customers', [AdminController::class, 'customers']);
+    $r->get('/customers/{id}', [AdminController::class, 'customerDetail']);
     $r->get('/reports', [AdminController::class, 'reports']);
     $r->get('/scanner', [AdminController::class, 'scanner']);
     $r->get('/settings', [AdminController::class, 'settings']);

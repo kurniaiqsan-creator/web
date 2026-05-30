@@ -102,18 +102,18 @@ class Router
 
         return <<<HTML
         <!DOCTYPE html>
-        <html lang="id">
+        <html lang="id" data-coreui-theme="light">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>{$title}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.4.1/dist/css/coreui.min.css">
         </head>
-        <body class="bg-gray-50 min-h-screen flex items-center justify-center">
-            <div class="text-center">
-                <h1 class="text-6xl font-bold text-gray-900">{$code}</h1>
-                <p class="mt-4 text-gray-600">{$message}</p>
-                <a href="/" class="mt-6 inline-block text-brand-500 hover:text-brand-600">← Kembali ke Beranda</a>
+        <body class="bg-body-tertiary d-flex align-items-center justify-content-center" style="min-height:100vh">
+            <div class="text-center px-3">
+                <h1 class="display-1 fw-bold">{$code}</h1>
+                <p class="text-medium-emphasis mb-4">{$message}</p>
+                <a href="/" class="btn btn-outline-primary">&larr; Kembali ke Beranda</a>
             </div>
         </body>
         </html>

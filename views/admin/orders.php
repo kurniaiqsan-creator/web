@@ -9,7 +9,7 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped align-middle mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th class="ps-4">Order</th>
                             <th>Customer</th>
@@ -24,7 +24,16 @@
                         <?php foreach ($orders as $o): ?>
                             <tr>
                                 <td class="ps-4"><span class="font-monospace small fw-semibold"><?= View::e($o['order_code']) ?></span></td>
-                                <td class="text-medium-emphasis small">-</td>
+                                <td>
+                                    <?php if (!empty($o['customer_email'])): ?>
+                                        <a href="<?= base_url('/admin/customers/email:' . urlencode($o['customer_email'])) ?>" class="text-decoration-none">
+                                            <div class="fw-medium"><?= View::e($o['customer_name'] ?? $o['customer_email']) ?></div>
+                                            <div class="small text-medium-emphasis"><?= View::e($o['customer_email']) ?></div>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-medium-emphasis small">—</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="text-end fw-semibold"><?= View::formatRupiah($o['total_amount_cents']) ?></td>
                                 <td>
                                     <?php

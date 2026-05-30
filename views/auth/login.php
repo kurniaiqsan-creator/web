@@ -1,32 +1,35 @@
 <?php ob_start(); ?>
-<div class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-    <div class="w-full max-w-sm">
-        <div class="card p-6">
-            <div class="text-center mb-6">
-                <h1 class="text-xl font-bold">Masuk</h1>
-                <p class="mt-1 text-sm text-gray-500">Masuk ke dashboard tenant kamu</p>
-            </div>
+<div class="container-lg d-flex align-items-center justify-content-center py-5" style="min-height:calc(100vh - 8rem)">
+    <div style="width:100%;max-width:24rem">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <span class="brand-mark d-inline-flex align-items-center justify-content-center rounded-circle fw-bold mb-3"
+                          style="width:44px;height:44px">V</span>
+                    <h1 class="h4 fw-bold mb-1">Masuk Admin</h1>
+                    <p class="small text-medium-emphasis mb-0">Akses dashboard untuk kelola event &amp; tiket.</p>
+                </div>
 
-            <?php if (!empty($error)): ?>
-                <div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700"><?= View::e($error) ?></div>
-            <?php endif; ?>
+                <?php if (!empty($error)): ?>
+                    <div class="alert alert-danger py-2 small mb-3"><?= View::e($error) ?></div>
+                <?php endif; ?>
 
-            <form method="POST" action="<?= base_url('/login') ?>" class="space-y-4">
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" class="input" placeholder="admin@acousticnights.com" required></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" name="password" class="input" placeholder="••••••••" required></div>
-                <button type="submit" class="btn btn-primary btn-lg w-full">Masuk</button>
-            </form>
-
-            <div class="mt-4 text-center text-sm">
-                <span class="text-gray-500">Belum punya akun? </span>
-                <a href="<?= base_url('/onboarding') ?>" class="text-brand-600 hover:text-brand-700 font-medium">Buat tenant</a>
+                <form method="POST" action="<?= base_url('/login') ?>">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="admin@acousticnights.com" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Masuk</button>
+                </form>
             </div>
         </div>
 
-        <div class="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-700">
-            <strong>Demo:</strong> Email: admin@acousticnights.com / Password: password
+        <div class="alert alert-info mt-3 small mb-0">
+            <strong>Demo:</strong> <code>admin@acousticnights.com</code> / <code>password</code>
         </div>
     </div>
 </div>

@@ -1,140 +1,137 @@
 <?php ob_start(); ?>
-<div class="mx-auto max-w-6xl px-4 py-6" x-data="seatMap()" x-init="init()">
-    <!-- Hero -->
-    <div class="mb-6">
-        <div class="flex flex-wrap items-center gap-2 mb-2">
-            <span class="badge badge-info">Seat Map</span>
-            <span class="badge badge-success">Published</span>
+<div class="container-lg py-4" x-data="seatMap()" x-init="init()">
+
+    <div class="mb-4">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            <span class="badge text-bg-info">Seat Map</span>
+            <span class="badge text-bg-success">Published</span>
         </div>
-        <h1 class="text-2xl font-bold sm:text-3xl"><?= View::e($event['title']) ?></h1>
-        <div class="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-600">
-            <span><?= View::formatDate($event['start_time']) ?></span>
-            <span><?= View::e($event['venue_name']) ?></span>
+        <h1 class="h3 fw-bold mb-2"><?= View::e($event['title']) ?></h1>
+        <div class="d-flex flex-wrap gap-3 small text-medium-emphasis">
+            <span><i class="cil-calendar me-1"></i><?= View::formatDate($event['start_time']) ?></span>
+            <span><i class="cil-location-pin me-1"></i><?= View::e($event['venue_name']) ?></span>
         </div>
         <?php if (!empty($event['description'])): ?>
-            <p class="mt-3 text-sm text-gray-500 max-w-2xl"><?= View::e($event['description']) ?></p>
+            <p class="mt-3 text-medium-emphasis" style="max-width:48rem"><?= View::e($event['description']) ?></p>
         <?php endif; ?>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <!-- Seat Map -->
-        <div class="card overflow-hidden">
-            <div class="border-b px-4 py-3 flex items-center justify-between">
-                <h2 class="font-semibold">Pilih Kursi</h2>
-                <div class="flex items-center gap-3 text-xs text-gray-500">
-                    <span class="flex items-center gap-1"><span class="h-3 w-3 rounded-sm bg-emerald-400 inline-block"></span> Tersedia</span>
-                    <span class="flex items-center gap-1"><span class="h-3 w-3 rounded-sm bg-red-400 inline-block"></span> Terjual</span>
-                    <span class="flex items-center gap-1"><span class="h-3 w-3 rounded-sm bg-gray-300 inline-block"></span> Diblokir</span>
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h2 class="h6 fw-semibold mb-0">Pilih Kursi</h2>
+                    <div class="d-flex gap-3 small text-medium-emphasis">
+                        <span><span class="seat-legend-dot available"></span> Tersedia</span>
+                        <span><span class="seat-legend-dot sold"></span> Terjual</span>
+                        <span><span class="seat-legend-dot blocked"></span> Diblokir</span>
+                        <span><span class="seat-legend-dot selected"></span> Dipilih</span>
+                    </div>
                 </div>
-            </div>
-            <div class="p-4 flex justify-center overflow-auto">
-                <!-- SVG Seat Map -->
-                <div class="relative" style="min-width:320px">
-                    <svg id="seatmap-svg" width="340" height="220" class="cursor-pointer select-none">
-                        <?php
-                        $rows = [];
-                        $maxCol = 0;
-                        foreach ($seats as $s) {
-                            $rows[$s['row_label']] = true;
-                            $maxCol = max($maxCol, $s['col_number']);
-                        }
-                        $rowLabels = array_keys($rows);
-                        sort($rowLabels);
-                        $catNames = [];
-                        foreach ($categories as $cat) {
-                            $catNames[(int)$cat['id']] = $cat['name'];
-                        }
-                        $seatW = 26; $seatH = 26; $gap = 3;
-                        foreach ($seats as $s):
-                            $catName = $catNames[(int)($s['category_id'] ?? 0)] ?? '';
-                            $x = ($s['col_number'] - 1) * ($seatW + $gap) + $gap + 25;
-                            $y = (array_search($s['row_label'], $rowLabels)) * ($seatH + $gap) + $gap + 10;
-                            $colors = [
-                                'available' => 'fill-emerald-400 stroke-emerald-500',
-                                'blocked'   => 'fill-gray-300 stroke-gray-400',
-                                'sold'      => 'fill-red-400 stroke-red-500',
-                            ];
-                            $color = $colors[$s['status']] ?? 'fill-gray-200';
-                            $clickable = $s['status'] === 'available' ? 'cursor-pointer' : 'cursor-not-allowed';
-                        ?>
-                            <rect x="<?= $x ?>" y="<?= $y ?>" width="<?= $seatW ?>" height="<?= $seatH ?>" rx="3"
-                                  class="<?= $color ?> transition-colors seat-rect <?= $clickable ?>"
-                                  data-seat="<?= View::e($s['seat_label']) ?>"
-                                  data-status="<?= $s['status'] ?>"
-                                  data-price="<?= $s['price_cents'] ?>"
-                                  data-category="<?= View::e($catName) ?>"
-                                  onclick="window.seatMapInstance && window.seatMapInstance.toggleSeat('<?= View::e($s['seat_label']) ?>', <?= $s['price_cents'] ?>, '<?= $s['status'] ?>', '<?= View::e($catName) ?>', <?= (int)($s['category_id'] ?? 0) ?>)"
-                            />
-                            <text x="<?= $x + $seatW/2 ?>" y="<?= $y + $seatH/2 ?>" text-anchor="middle" dominant-baseline="central"
-                                  class="text-[7px] font-medium pointer-events-none <?= $s['status'] === 'available' ? 'fill-gray-600' : 'fill-white' ?>">
-                                <?= $s['col_number'] ?>
-                            </text>
-                        <?php endforeach; ?>
-                    </svg>
+                <div class="card-body d-flex justify-content-center overflow-auto">
+                    <div style="min-width:320px">
+                        <svg id="seatmap-svg" width="340" height="220" class="user-select-none">
+                            <?php
+                            $rows = [];
+                            $maxCol = 0;
+                            foreach ($seats as $s) {
+                                $rows[$s['row_label']] = true;
+                                $maxCol = max($maxCol, $s['col_number']);
+                            }
+                            $rowLabels = array_keys($rows);
+                            sort($rowLabels);
+                            $catNames = [];
+                            foreach ($categories as $cat) {
+                                $catNames[(int)$cat['id']] = $cat['name'];
+                            }
+                            $seatW = 26; $seatH = 26; $gap = 3;
+                            foreach ($seats as $s):
+                                $catName = $catNames[(int)($s['category_id'] ?? 0)] ?? '';
+                                $x = ($s['col_number'] - 1) * ($seatW + $gap) + $gap + 25;
+                                $y = (array_search($s['row_label'], $rowLabels)) * ($seatH + $gap) + $gap + 10;
+                                $statusClass = 'seat-' . ($s['status'] ?? 'blocked');
+                            ?>
+                                <rect x="<?= $x ?>" y="<?= $y ?>" width="<?= $seatW ?>" height="<?= $seatH ?>" rx="3"
+                                      class="seat-rect <?= $statusClass ?>"
+                                      data-seat="<?= View::e($s['seat_label']) ?>"
+                                      data-status="<?= $s['status'] ?>"
+                                      data-price="<?= $s['price_cents'] ?>"
+                                      data-category="<?= View::e($catName) ?>"
+                                      onclick="window.seatMapInstance && window.seatMapInstance.toggleSeat('<?= View::e($s['seat_label']) ?>', <?= $s['price_cents'] ?>, '<?= $s['status'] ?>', '<?= View::e($catName) ?>', <?= (int)($s['category_id'] ?? 0) ?>)"
+                                />
+                                <text x="<?= $x + $seatW/2 ?>" y="<?= $y + $seatH/2 ?>" text-anchor="middle" dominant-baseline="central"
+                                      class="pointer-events-none" style="font-size:7px;font-weight:500;fill:#fff">
+                                    <?= $s['col_number'] ?>
+                                </text>
+                            <?php endforeach; ?>
+                        </svg>
+                    </div>
                 </div>
-            </div>
-            <div class="mx-4 mb-4 rounded-lg bg-gray-100 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Panggung
+                <div class="card-footer text-center small text-uppercase text-medium-emphasis fw-semibold" style="letter-spacing:.08em">
+                    Panggung
+                </div>
             </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="space-y-4">
-            <!-- Ticket Types -->
-            <div class="card p-4 sm:p-5">
-                <h3 class="font-semibold">Tipe Tiket</h3>
-                <div class="mt-3 space-y-2">
-                    <?php foreach ($categories as $cat): ?>
-                        <div class="flex items-center justify-between rounded-lg border bg-gray-50 px-3 py-2 text-sm">
-                            <span class="font-medium"><?= View::e($cat['name']) ?></span>
-                            <span class="text-brand-600 font-semibold"><?= View::formatRupiah($cat['price_cents']) ?></span>
-                        </div>
-                    <?php endforeach; ?>
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h3 class="h6 fw-semibold mb-3">Tipe Tiket</h3>
+                    <div class="d-flex flex-column gap-2">
+                        <?php foreach ($categories as $cat): ?>
+                            <div class="d-flex justify-content-between align-items-center rounded-3 border bg-body-tertiary px-3 py-2 small">
+                                <span class="fw-medium"><?= View::e($cat['name']) ?></span>
+                                <span class="text-primary fw-semibold"><?= View::formatRupiah($cat['price_cents']) ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
 
-            <!-- Order Panel -->
-            <div class="card p-4 sm:p-5">
-                <h3 class="font-semibold">Pesanan Kamu</h3>
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="h6 fw-semibold mb-3">Pesanan Kamu</h3>
 
-                <template x-if="selectedSeats.length === 0 && !holdActive">
-                    <p class="mt-3 text-sm text-gray-500">Klik kursi yang tersedia di denah untuk memilih.</p>
-                </template>
+                    <template x-if="selectedSeats.length === 0 && !holdActive">
+                        <p class="small text-medium-emphasis mb-0">Klik kursi yang tersedia di denah untuk memilih.</p>
+                    </template>
 
-                <template x-if="selectedSeats.length > 0">
-                    <div class="mt-3 space-y-3">
-                        <template x-for="s in selectedSeats" :key="s.label">
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-600" x-text="'Kursi ' + s.label"></span>
-                                <span class="font-medium" x-text="formatRupiah(s.price)"></span>
+                    <template x-if="selectedSeats.length > 0">
+                        <div>
+                            <template x-for="s in selectedSeats" :key="s.label">
+                                <div class="d-flex justify-content-between align-items-center small mb-1">
+                                    <span class="text-medium-emphasis" x-text="'Kursi ' + s.label"></span>
+                                    <span class="fw-medium" x-text="formatRupiah(s.price)"></span>
+                                </div>
+                            </template>
+                            <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center fw-semibold">
+                                <span>Total</span>
+                                <span class="text-primary" x-text="formatRupiah(totalPrice)"></span>
                             </div>
-                        </template>
-                        <div class="border-t pt-2 flex items-center justify-between font-semibold">
-                            <span>Total</span>
-                            <span class="text-brand-600" x-text="formatRupiah(totalPrice)"></span>
-                        </div>
 
-                        <template x-if="holdActive">
-                            <div class="flex items-center justify-between rounded-lg bg-brand-50 px-3 py-2">
-                                <span class="text-sm font-medium text-brand-700">Kursi dipesan</span>
-                                <span class="text-xs font-mono font-bold text-brand-700" x-text="timerDisplay"></span>
-                            </div>
-                        </template>
+                            <template x-if="holdActive">
+                                <div class="alert alert-primary py-2 mt-3 mb-0 d-flex justify-content-between align-items-center">
+                                    <span class="small fw-medium">Kursi dipesan</span>
+                                    <span class="font-monospace fw-bold" x-text="timerDisplay"></span>
+                                </div>
+                            </template>
 
-                        <button x-show="!holdActive" class="btn btn-primary btn-lg w-full" @click="reserveSeats()" :disabled="loading">
-                            Pesan Kursi
-                        </button>
-
-                        <template x-if="holdActive">
-                            <div class="space-y-2">
-                                <button class="btn btn-primary btn-lg w-full" @click="goToCheckout()">Lanjut ke Checkout</button>
-                                <button class="w-full text-center text-xs text-gray-500 hover:text-gray-700" @click="releaseHold()">
-                                    Batalkan pesanan
+                            <div class="d-grid gap-2 mt-3">
+                                <button x-show="!holdActive" class="btn btn-primary btn-lg" @click="reserveSeats()" :disabled="loading">
+                                    Pesan Kursi
                                 </button>
+                                <template x-if="holdActive">
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-primary btn-lg" @click="goToCheckout()">Lanjut ke Checkout</button>
+                                        <button class="btn btn-link btn-sm text-medium-emphasis" @click="releaseHold()">
+                                            Batalkan pesanan
+                                        </button>
+                                    </div>
+                                </template>
                             </div>
-                        </template>
-                    </div>
-                </template>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
     </div>
@@ -166,11 +163,17 @@ function seatMap() {
             if (idx >= 0) {
                 this.selectedSeats.splice(idx, 1);
                 this.totalPrice -= price;
-                document.querySelectorAll('.seat-rect[data-seat="'+label+'"]').forEach(r => {r.classList.remove('fill-brand-500','stroke-brand-600'); r.classList.add('fill-emerald-400','stroke-emerald-500');});
+                document.querySelectorAll('.seat-rect[data-seat="'+label+'"]').forEach(r => {
+                    r.classList.remove('seat-selected');
+                    r.classList.add('seat-available');
+                });
             } else {
                 this.selectedSeats.push({label, price, category: category || '', categoryId: categoryId || null});
                 this.totalPrice += price;
-                document.querySelectorAll('.seat-rect[data-seat="'+label+'"]').forEach(r => {r.classList.add('fill-brand-500','stroke-brand-600'); r.classList.remove('fill-emerald-400','stroke-emerald-500');});
+                document.querySelectorAll('.seat-rect[data-seat="'+label+'"]').forEach(r => {
+                    r.classList.add('seat-selected');
+                    r.classList.remove('seat-available');
+                });
             }
         },
         goToCheckout() {
@@ -191,7 +194,7 @@ function seatMap() {
             if (this.selectedSeats.length === 0) return showToast('Pilih kursi terlebih dahulu', 'error');
             this.loading = true;
             try {
-                const res = await fetch('/api/v1/seat-holds', {
+                const res = await fetch(base_url('/api/v1/seat-holds'), {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({

@@ -1,92 +1,65 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-coreui-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= View::e($title ?? 'Visi') ?> — Visi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: { 50:'#fff7ed',100:'#ffedd5',200:'#fed7aa',300:'#fdba74',400:'#fb923c',500:'#f97316',600:'#ea580c',700:'#c2410c',800:'#9a3412',900:'#7c2d12' }
-                    }
-                }
-            }
-        }
-    </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        [x-cloak] { display: none !important; }
-        .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:.5rem;font-weight:500;transition:all .15s;gap:.5rem}
-        .btn:disabled{opacity:.5;pointer-events:none}
-        .btn-primary{background:#f97316;color:#fff}.btn-primary:hover{background:#ea580c}
-        .btn-secondary{background:#f3f4f6;color:#111827}.btn-secondary:hover{background:#e5e7eb}
-        .btn-outline{border:1px solid #d1d5db;background:#fff;color:#374151}.btn-outline:hover{background:#f9fafb}
-        .btn-ghost{color:#4b5563}.btn-ghost:hover{background:#f3f4f6}
-        .btn-danger{background:#ef4444;color:#fff}.btn-danger:hover{background:#dc2626}
-        .btn-sm{height:2rem;padding:0 .75rem;font-size:.75rem}
-        .btn-md{height:2.5rem;padding:0 1rem;font-size:.875rem}
-        .btn-lg{height:3rem;padding:0 1.5rem;font-size:1rem}
-        .input{width:100%;height:2.5rem;border:1px solid #d1d5db;border-radius:.5rem;padding:0 .75rem;font-size:.875rem;outline:none}
-        .input:focus{border-color:#f97316;box-shadow:0 0 0 2px rgba(249,115,22,.2)}
-        .card{border:1px solid #e5e7eb;border-radius:.75rem;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-        .badge{display:inline-flex;align-items:center;border-radius:9999px;padding:.125rem .625rem;font-size:.75rem;font-weight:500}
-        .badge-success{background:#d1fae5;color:#065f46}
-        .badge-warning{background:#fef3c7;color:#92400e}
-        .badge-danger{background:#fee2e2;color:#991b1b}
-        .badge-info{background:#dbeafe;color:#1e40af}
-        .badge-neutral{background:#f3f4f6;color:#374151}
-    </style>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.4.1/dist/css/coreui.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@3.2.0/css/all.min.css">
+    <link rel="stylesheet" href="<?= base_url('/assets/css/visi.css') ?>">
+
+    <script src="<?= base_url('/assets/js/color-modes.js') ?>"></script>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
-    <header class="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">
-        <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-            <a href="<?= base_url('/') ?>" class="flex items-center gap-2">
-                <svg class="h-6 w-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                <span class="text-lg font-bold">Visi</span>
+<body class="bg-body-tertiary d-flex flex-column min-vh-100">
+    <header class="border-bottom bg-body sticky-top">
+        <div class="container-lg d-flex align-items-center justify-content-between" style="height:56px">
+            <a href="<?= base_url('/') ?>" class="d-flex align-items-center gap-2 text-decoration-none text-body">
+                <span class="brand-mark d-inline-flex align-items-center justify-content-center rounded-circle fw-bold"
+                      style="width:32px;height:32px">V</span>
+                <span class="fs-5 fw-semibold">Visi</span>
             </a>
-            <div class="flex items-center gap-3">
+
+            <div class="d-flex align-items-center gap-2">
+                <div class="dropdown">
+                    <button class="btn btn-link nav-link p-2 d-flex align-items-center text-body" type="button"
+                            data-coreui-toggle="dropdown" aria-expanded="false" aria-label="Tema warna">
+                        <i class="theme-icon-active cil-contrast icon-lg"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="--cui-dropdown-min-width:8rem">
+                        <li><button type="button" class="dropdown-item d-flex align-items-center"
+                            data-coreui-theme-value="light" data-icon-class="cil-sun icon-lg"><i class="cil-sun icon me-2"></i>Terang</button></li>
+                        <li><button type="button" class="dropdown-item d-flex align-items-center"
+                            data-coreui-theme-value="dark" data-icon-class="cil-moon icon-lg"><i class="cil-moon icon me-2"></i>Gelap</button></li>
+                        <li><button type="button" class="dropdown-item d-flex align-items-center active"
+                            data-coreui-theme-value="auto" data-icon-class="cil-contrast icon-lg"><i class="cil-contrast icon me-2"></i>Auto</button></li>
+                    </ul>
+                </div>
                 <?php if (!empty($_SESSION['user_id'])): ?>
-                    <a href="<?= base_url('/admin/dashboard') ?>" class="text-sm text-gray-600 hover:text-gray-900">Dashboard</a>
-                    <a href="<?= base_url('/logout') ?>" class="text-sm text-gray-600 hover:text-gray-900">Keluar</a>
+                    <a href="<?= base_url('/admin/dashboard') ?>" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+                    <a href="<?= base_url('/logout') ?>" class="btn btn-link text-body-secondary btn-sm">Keluar</a>
                 <?php else: ?>
-                    <a href="<?= base_url('/login') ?>" class="text-sm text-gray-600 hover:text-gray-900">Masuk</a>
-                    <a href="<?= base_url('/onboarding') ?>" class="btn btn-primary btn-sm">Mulai Gratis</a>
+                    <a href="<?= base_url('/login') ?>" class="btn btn-primary btn-sm">Masuk Admin</a>
                 <?php endif; ?>
             </div>
         </div>
     </header>
-    <main class="flex-1">
+
+    <main class="flex-grow-1">
         <?= $content ?? '' ?>
     </main>
-    <footer class="border-t bg-white py-6 text-center text-xs text-gray-500">
-        &copy; <?= date('Y') ?> Visi — Platform Tiket
+
+    <footer class="border-top bg-body py-3 mt-4">
+        <div class="container-lg text-center small text-medium-emphasis">
+            &copy; <?= date('Y') ?> Visi — Platform Tiket
+        </div>
     </footer>
 
-    <!-- Global JS helpers -->
-    <div id="toastContainer" class="fixed top-4 right-4 z-[60] flex flex-col gap-2"></div>
-    <script>
-        window.BASE_URL = <?= json_encode(BASE_URL) ?>;
-        function base_url(path = '') {
-            return window.BASE_URL + '/' + String(path).replace(/^\/+/, '');
-        }
-        function showToast(msg, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            if (!container) return;
-            const colors = {
-                success: 'bg-emerald-600',
-                error: 'bg-red-600',
-                warning: 'bg-amber-500',
-                info: 'bg-brand-600',
-            };
-            const el = document.createElement('div');
-            el.className = 'rounded-lg px-4 py-2 text-sm font-medium text-white shadow-lg transition-opacity duration-300 ' + (colors[type] || colors.success);
-            el.textContent = msg;
-            container.appendChild(el);
-            setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
-        }
-    </script>
+    <div id="visiToastContainer" class="visi-toast-container"></div>
+
+    <script>window.BASE_URL = <?= json_encode(BASE_URL) ?>;</script>
+    <script src="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.4.1/dist/js/coreui.bundle.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="<?= base_url('/assets/js/visi.js') ?>"></script>
 </body>
 </html>

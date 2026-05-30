@@ -40,7 +40,7 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped align-middle mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr><th class="ps-4">Event</th><th class="text-end">Penjualan</th><th class="text-end">Order</th><th class="text-end pe-4">Rata-rata</th></tr>
                     </thead>
                     <tbody>

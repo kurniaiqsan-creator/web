@@ -1,54 +1,63 @@
 <?php ob_start(); ?>
-<div class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-    <div class="w-full max-w-md">
-        <div class="card overflow-hidden">
-            <div class="bg-brand-500 h-2"></div>
-            <div class="p-5">
-                <div class="text-center mb-4">
-                    <h1 class="text-lg font-bold"><?= View::e($ticket['event_title']) ?></h1>
-                    <div class="mt-2 flex items-center justify-center gap-3 text-xs text-gray-500">
-                        <span><?= View::formatDate($ticket['start_time'] ?? $ticket['issued_at'] ?? '') ?></span>
-                        <span><?= View::e($ticket['venue_name']) ?></span>
+<div class="container-lg d-flex align-items-center justify-content-center py-5" style="min-height:calc(100vh - 8rem)">
+    <div style="width:100%;max-width:28rem">
+        <div class="card overflow-hidden shadow-sm">
+            <div class="eticket-accent"></div>
+            <div class="card-body p-4">
+                <div class="text-center mb-3">
+                    <h1 class="h5 fw-bold mb-1"><?= View::e($ticket['event_title']) ?></h1>
+                    <div class="d-flex justify-content-center gap-3 small text-medium-emphasis">
+                        <span><i class="cil-calendar me-1"></i><?= View::formatDate($ticket['start_time'] ?? $ticket['issued_at'] ?? '') ?></span>
+                        <span><i class="cil-location-pin me-1"></i><?= View::e($ticket['venue_name']) ?></span>
                     </div>
                 </div>
 
-                <div class="flex justify-center mb-4">
-                    <div class="rounded-xl border bg-white p-3">
+                <div class="d-flex justify-content-center mb-3">
+                    <div class="rounded-3 border bg-white p-3">
                         <div id="qr-code" data-url="<?= View::e(base_url('/t/' . $ticket['ticket_token'])) ?>"></div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 text-sm mb-4">
-                    <div class="rounded-lg bg-gray-50 p-3 text-center">
-                        <p class="text-xs text-gray-500">Kursi</p>
-                        <p class="font-bold text-lg"><?= View::e($ticket['seat_label']) ?></p>
+                <div class="row g-2 small mb-3">
+                    <div class="col-6">
+                        <div class="rounded-3 bg-body-tertiary p-3 text-center">
+                            <div class="text-medium-emphasis small">Kursi</div>
+                            <div class="fs-5 fw-bold"><?= View::e($ticket['seat_label']) ?></div>
+                        </div>
                     </div>
-                    <div class="rounded-lg bg-gray-50 p-3 text-center">
-                        <p class="text-xs text-gray-500">Status</p>
-                        <span class="badge badge-success mt-1"><?= $ticket['status'] === 'valid' ? 'Valid' : View::e($ticket['status']) ?></span>
+                    <div class="col-6">
+                        <div class="rounded-3 bg-body-tertiary p-3 text-center">
+                            <div class="text-medium-emphasis small">Status</div>
+                            <span class="badge text-bg-success mt-1"><?= $ticket['status'] === 'valid' ? 'Valid' : View::e($ticket['status']) ?></span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between text-xs text-gray-500 px-1">
+                <div class="d-flex justify-content-between small text-medium-emphasis px-1 mb-3">
                     <span>Order: <?= View::e($ticket['order_code']) ?></span>
-                    <span class="font-mono"><?= substr(View::e($ticket['ticket_token']), 0, 12) ?></span>
+                    <span class="font-monospace"><?= substr(View::e($ticket['ticket_token']), 0, 12) ?></span>
                 </div>
 
-                <div class="mt-4 flex gap-2">
-                    <button class="btn btn-outline btn-sm w-full" onclick="showToast('PDF diunduh')">PDF</button>
-                    <button class="btn btn-outline btn-sm w-full" onclick="navigator.clipboard.writeText(window.location.href);showToast('Link disalin')">Bagikan</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm flex-grow-1" type="button" onclick="showToast('PDF diunduh')">
+                        <i class="cil-cloud-download me-1"></i>PDF
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm flex-grow-1" type="button"
+                            onclick="navigator.clipboard.writeText(window.location.href);showToast('Link disalin')">
+                        <i class="cil-share me-1"></i>Bagikan
+                    </button>
                 </div>
             </div>
-            <div class="bg-brand-500 h-2"></div>
+            <div class="eticket-accent"></div>
         </div>
-        <p class="mt-4 text-center text-xs text-gray-400">Tunjukkan QR code ini saat masuk venue</p>
+        <p class="mt-3 text-center small text-medium-emphasis">Tunjukkan QR code ini saat masuk venue</p>
     </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var el = document.getElementById('qr-code');
-        if (el) new QRCode(el, { text: el.dataset.url, width: 176, height: 176, correctLevel: QRCode.CorrectLevel.M });
+        if (el) new QRCode(el, { text: el.dataset.url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
     });
 </script>
 <?php $content = ob_get_clean(); require VIEW_PATH . '/layouts/main.php'; ?>
