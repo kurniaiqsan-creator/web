@@ -60,32 +60,12 @@ function tenantMiddleware(): void
     }
 }
 
-// ===== PUBLIC ROUTES =====
+// ===== ROOT =====
 $router->get('/', function () {
     return (new PublicController())->home();
 });
 
-$router->get('/{tenantSlug}', function (string $tenantSlug) {
-    return (new PublicController())->tenantHome($tenantSlug);
-});
-
-$router->get('/{tenantSlug}/events/{eventSlug}', function (string $tenantSlug, string $eventSlug) {
-    return (new PublicController())->eventDetail($tenantSlug, $eventSlug);
-});
-
-$router->get('/{tenantSlug}/events/{eventSlug}/checkout', function (string $tenantSlug, string $eventSlug) {
-    return (new PublicController())->checkout($tenantSlug, $eventSlug);
-});
-
-$router->get('/{tenantSlug}/events/{eventSlug}/confirmation', function (string $tenantSlug, string $eventSlug) {
-    return (new PublicController())->confirmation($tenantSlug, $eventSlug);
-});
-
-$router->get('/t/{token}', function (string $token) {
-    return (new PublicController())->eticket($token);
-});
-
-// ===== AUTH ROUTES =====
+// ===== AUTH ROUTES (harus sebelum /{tenantSlug}) =====
 $router->get('/login', function () {
     return (new AuthController())->loginForm();
 });
@@ -106,7 +86,12 @@ $router->post('/onboarding', function () {
     return (new ApiController())->createTenant();
 });
 
-// ===== ADMIN ROUTES =====
+// ===== E-TICKET (harus sebelum /{tenantSlug}) =====
+$router->get('/t/{token}', function (string $token) {
+    return (new PublicController())->eticket($token);
+});
+
+// ===== ADMIN ROUTES (harus sebelum /{tenantSlug}) =====
 $router->group('/admin', function (Router $r) {
     $r->get('/dashboard', [AdminController::class, 'dashboard']);
     $r->get('/events', [AdminController::class, 'events']);
@@ -118,7 +103,7 @@ $router->group('/admin', function (Router $r) {
     $r->get('/settings', [AdminController::class, 'settings']);
 }, [adminMiddleware(...), tenantMiddleware(...)]);
 
-// ===== API ROUTES =====
+// ===== API ROUTES (harus sebelum /{tenantSlug}) =====
 $router->group('/api/v1', function (Router $r) {
     $r->post('/tenants', [ApiController::class, 'createTenant']);
     $r->post('/seat-holds', [ApiController::class, 'createSeatHold']);
@@ -131,8 +116,25 @@ $router->group('/api/v1', function (Router $r) {
     $r->get('/events/{id}/seats', [ApiController::class, 'getEventSeats']);
 });
 
-// ===== WEBHOOK =====
+// ===== WEBHOOK (harus sebelum /{tenantSlug}) =====
 $router->post('/webhooks/payment', [ApiController::class, 'paymentWebhook']);
+
+// ===== TENANT ROUTES (catch-all, harus TERAKHIR) =====
+$router->get('/{tenantSlug}', function (string $tenantSlug) {
+    return (new PublicController())->tenantHome($tenantSlug);
+});
+
+$router->get('/{tenantSlug}/events/{eventSlug}', function (string $tenantSlug, string $eventSlug) {
+    return (new PublicController())->eventDetail($tenantSlug, $eventSlug);
+});
+
+$router->get('/{tenantSlug}/events/{eventSlug}/checkout', function (string $tenantSlug, string $eventSlug) {
+    return (new PublicController())->checkout($tenantSlug, $eventSlug);
+});
+
+$router->get('/{tenantSlug}/events/{eventSlug}/confirmation', function (string $tenantSlug, string $eventSlug) {
+    return (new PublicController())->confirmation($tenantSlug, $eventSlug);
+});
 
 // Dispatch
 $method = $_SERVER['REQUEST_METHOD'];
