@@ -6,7 +6,7 @@
     <title><?= View::e($title ?? 'Admin') ?> — Visi Admin</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.4.1/dist/css/coreui.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@3.2.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@3.1.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplebar@6.3.0/dist/simplebar.min.css">
     <link rel="stylesheet" href="<?= base_url('/assets/css/visi.css') ?>">
 
