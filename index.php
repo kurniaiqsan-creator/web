@@ -23,6 +23,13 @@ $url = parse_url($url, PHP_URL_PATH);
 // Clean up
 $url = '/' . trim((string)$url, '/');
 
+// Skip routing for direct file access (e.g., /visi/index.php)
+// These should be served as-is, not routed
+if ($url === '/index.php' || preg_match('#\.(php|css|js|png|jpg|svg|ico)$#', $url)) {
+    // If it's index.php accessed directly, treat as root
+    if ($url === '/index.php') $url = '/';
+}
+
 // Pass as the url parameter that the router expects
 $_GET['url'] = $url;
 
