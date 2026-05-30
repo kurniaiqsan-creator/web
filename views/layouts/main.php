@@ -64,5 +64,29 @@
     <footer class="border-t bg-white py-6 text-center text-xs text-gray-500">
         &copy; <?= date('Y') ?> Visi — Platform Tiket
     </footer>
+
+    <!-- Global JS helpers -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-[60] flex flex-col gap-2"></div>
+    <script>
+        window.BASE_URL = <?= json_encode(BASE_URL) ?>;
+        function base_url(path = '') {
+            return window.BASE_URL + '/' + String(path).replace(/^\/+/, '');
+        }
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const colors = {
+                success: 'bg-emerald-600',
+                error: 'bg-red-600',
+                warning: 'bg-amber-500',
+                info: 'bg-brand-600',
+            };
+            const el = document.createElement('div');
+            el.className = 'rounded-lg px-4 py-2 text-sm font-medium text-white shadow-lg transition-opacity duration-300 ' + (colors[type] || colors.success);
+            el.textContent = msg;
+            container.appendChild(el);
+            setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+        }
+    </script>
 </body>
 </html>

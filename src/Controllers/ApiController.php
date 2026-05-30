@@ -144,12 +144,15 @@ class ApiController
         $items = $data['items'] ?? [];
         $customer = $data['customer'] ?? [];
         $currency = $data['currency'] ?? 'idr';
+        $eventId = $data['event_id'] ?? ($items[0]['event_id'] ?? null);
+        $discountCents = max(0, (int)($data['discount_cents'] ?? 0));
 
         if (empty($items)) {
             return $this->error('VALIDATION', 'Items wajib diisi');
         }
 
-        $totalCents = array_sum(array_column($items, 'price_cents'));
+        $subtotalCents = array_sum(array_column($items, 'price_cents'));
+        $totalCents = max(0, $subtotalCents - $discountCents);
         $orderCode = 'ORD-' . str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         Database::beginTransaction();
@@ -157,6 +160,7 @@ class ApiController
             $orderId = Database::insert('orders', [
                 'order_uid'         => 'order_' . bin2hex(random_bytes(8)),
                 'tenant_id'         => $tenantId,
+                'event_id'          => $eventId,
                 'order_code'        => $orderCode,
                 'total_amount_cents'=> $totalCents,
                 'currency'          => $currency,
@@ -168,10 +172,10 @@ class ApiController
             foreach ($items as $item) {
                 Database::insert('order_items', [
                     'order_id'     => $orderId,
-                    'event_id'     => $item['event_id'],
+                    'event_id'     => $item['event_id'] ?? $eventId,
                     'seat_label'   => $item['seat_label'] ?? null,
-                    'category_id'  => $item['category_id'],
-                    'price_cents'  => $item['price_cents'],
+                    'category_id'  => $item['category_id'] ?? null,
+                    'price_cents'  => $item['price_cents'] ?? 0,
                 ]);
             }
 
@@ -213,6 +217,7 @@ class ApiController
 
         $totalDiscount = 0;
         $applied = [];
+        $subtotal = array_sum(array_column($cart, 'price_cents'));
 
         foreach ($codes as $code) {
             $promo = Database::fetch(
@@ -222,8 +227,9 @@ class ApiController
 
             if ($promo) {
                 $discount = $promo['type'] === 'percentage'
-                    ? (int)($cart[0]['price_cents'] * $promo['value'] / 100)
+                    ? (int)round($subtotal * $promo['value'] / 100)
                     : (int)($promo['value'] * 100);
+                $discount = min($discount, $subtotal);
 
                 $totalDiscount += $discount;
                 $applied[] = [
@@ -234,8 +240,6 @@ class ApiController
                 ];
             }
         }
-
-        $subtotal = array_sum(array_column($cart, 'price_cents'));
 
         return $this->json([
             'applied_promos'       => $applied,
