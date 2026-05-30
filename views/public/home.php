@@ -9,8 +9,8 @@
             Platform tiket B2B2C multi‑tenant. Setup 5 menit, mobile‑friendly, dukungan seat booking, e‑ticket QR, dan integrasi pembayaran lokal.
         </p>
         <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <a href="/onboarding" class="btn btn-primary btn-lg min-w-[200px]">Mulai Sekarang</a>
-            <a href="/acoustic-nights" class="btn btn-outline btn-lg">Lihat Demo</a>
+            <a href="<?= base_url('/onboarding') ?>" class="btn btn-primary btn-lg min-w-[200px]">Mulai Sekarang</a>
+            <a href="<?= base_url('/acoustic-nights') ?>" class="btn btn-outline btn-lg">Lihat Demo</a>
         </div>
     </div>
 </div>

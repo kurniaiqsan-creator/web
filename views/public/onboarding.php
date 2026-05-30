@@ -84,7 +84,7 @@
                             <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4"><svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></div>
                             <h2 class="text-xl font-bold">Siap Jualan Tiket!</h2>
                             <p class="mt-2 text-sm text-gray-500">Tenant <span class="font-semibold" x-text="tenantName||'kamu'"></span> sudah siap.</p>
-                            <a href="/login" class="btn btn-primary btn-md mt-6 no-underline inline-flex">Buka Dashboard</a>
+                            <a href="<?= base_url('/login') ?>" class="btn btn-primary btn-md mt-6 no-underline inline-flex">Buka Dashboard</a>
                         </div>
                     </template>
                 </div>

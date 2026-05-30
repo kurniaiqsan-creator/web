@@ -10,7 +10,7 @@
     <h2 class="text-lg font-semibold mb-4">Event Mendatang</h2>
     <div class="space-y-4">
         <?php foreach ($events as $event): ?>
-            <a href="/<?= View::e($tenant['slug']) ?>/events/<?= $event['id'] ?>" class="card block hover:shadow-md transition-shadow">
+            <a href="<?= base_url("/{$tenant['slug']}/events/{$event['id']}") ?>" class="card block hover:shadow-md transition-shadow">
                 <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
                     <div class="flex-shrink-0 text-sm font-semibold">
                         <?= View::formatDate($event['start_time']) ?>
