@@ -54,7 +54,6 @@ class Router
     public function dispatch(string $method, string $uri): void
     {
         $uri = '/' . trim(parse_url($uri, PHP_URL_PATH) ?? '', '/');
-        if ($uri === '/') $uri = '';
 
         foreach ($this->routes as $route) {
             if ($route['method'] !== $method) continue;
