@@ -13,6 +13,9 @@ $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 $baseDir = rtrim(dirname($scriptName), '/\\');
 if ($baseDir === '/' || $baseDir === '\\') $baseDir = '';
 
+// Store base URL globally for all views/redirects
+define('BASE_URL', $baseDir ?: '');
+
 // Remove the base directory prefix to get the actual route
 $url = $requestUri;
 if ($baseDir && str_starts_with($url, $baseDir)) {
@@ -32,6 +35,11 @@ if ($url === '/index.php' || preg_match('#\.(php|css|js|png|jpg|svg|ico)$#', $ur
 
 // Pass as the url parameter that the router expects
 $_GET['url'] = $url;
+
+// URL helper for views
+function base_url(string $path = ''): string {
+    return BASE_URL . '/' . ltrim($path, '/');
+}
 
 // Load the application
 require __DIR__ . '/public/index.php';

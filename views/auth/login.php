@@ -11,7 +11,7 @@
                 <div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700"><?= View::e($error) ?></div>
             <?php endif; ?>
 
-            <form method="POST" action="/login" class="space-y-4">
+            <form method="POST" action="<?= base_url('/login') ?>" class="space-y-4">
                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <input type="email" name="email" class="input" placeholder="admin@acousticnights.com" required></div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
@@ -21,7 +21,7 @@
 
             <div class="mt-4 text-center text-sm">
                 <span class="text-gray-500">Belum punya akun? </span>
-                <a href="/onboarding" class="text-brand-600 hover:text-brand-700 font-medium">Buat tenant</a>
+                <a href="<?= base_url('/onboarding') ?>" class="text-brand-600 hover:text-brand-700 font-medium">Buat tenant</a>
             </div>
         </div>
 

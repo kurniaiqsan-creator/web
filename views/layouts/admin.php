@@ -54,10 +54,10 @@
             ];
             $current = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
             foreach ($navs as [$href, $icon, $label]):
-                $active = str_starts_with($current, $href) && ($href !== '/admin' || $current === '/admin' || $current === '/admin/dashboard');
+            $active = str_starts_with($current, base_url($href));
             ?>
                 <li class="nav-item">
-                    <a class="nav-link <?= $active ? 'active' : '' ?>" href="<?= $href ?>">
+                    <a class="nav-link <?= $active ? 'active' : '' ?>" href="<?= base_url($href) ?>">
                         <i class="nav-icon <?= $icon ?>"></i>
                         <?= $label ?>
                     </a>
@@ -66,7 +66,7 @@
         </ul>
     </div>
     <div class="sidebar-footer border-top border-secondary border-opacity-25 mt-auto p-3">
-        <a href="/logout" class="btn btn-ghost-dark btn-sm w-100 text-start">
+            <a href="<?= base_url('/logout') ?>" class="btn btn-ghost-dark btn-sm w-100 text-start">
             <i class="cil-account-logout me-2"></i>Keluar
         </a>
     </div>
@@ -78,7 +78,7 @@
             <button class="header-toggler px-md-0 me-md-3" type="button" onclick="document.body.classList.toggle('sidebar-hidden')">
                 <i class="cil-menu icon-lg"></i>
             </button>
-            <a href="/" class="header-brand d-md-none">
+            <a href="<?= base_url('/') ?>" class="header-brand d-md-none">
                 <i class="cil-ticket me-1"></i> Visi
             </a>
             <ul class="header-nav ms-auto">
@@ -91,8 +91,8 @@
                     </a>
                     <div class="dropdown-menu dropdown-menu-end pt-0">
                         <div class="dropdown-header bg-light py-2"><strong><?= View::e($_SESSION['user_name'] ?? 'Admin') ?></strong></div>
-                        <a class="dropdown-item" href="/admin/settings"><i class="cil-settings me-2"></i>Pengaturan</a>
-                        <a class="dropdown-item" href="/logout"><i class="cil-account-logout me-2"></i>Keluar</a>
+                        <a class="dropdown-item" href="<?= base_url('/admin/settings') ?>"><i class="cil-settings me-2"></i>Pengaturan</a>
+                        <a class="dropdown-item" href="<?= base_url('/logout') ?>"><i class="cil-account-logout me-2"></i>Keluar</a>
                     </div>
                 </li>
             </ul>

@@ -122,6 +122,9 @@ class Router
 
     public static function redirect(string $url): never
     {
+        if (function_exists('base_url')) {
+            $url = base_url($url);
+        }
         header('Location: ' . $url);
         exit;
     }

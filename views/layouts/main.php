@@ -43,17 +43,17 @@
 <body class="bg-gray-50 min-h-screen flex flex-col">
     <header class="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">
         <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-            <a href="/" class="flex items-center gap-2">
+            <a href="<?= base_url('/') ?>" class="flex items-center gap-2">
                 <svg class="h-6 w-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 <span class="text-lg font-bold">Visi</span>
             </a>
             <div class="flex items-center gap-3">
                 <?php if (!empty($_SESSION['user_id'])): ?>
-                    <a href="/admin/dashboard" class="text-sm text-gray-600 hover:text-gray-900">Dashboard</a>
-                    <a href="/logout" class="text-sm text-gray-600 hover:text-gray-900">Keluar</a>
+                    <a href="<?= base_url('/admin/dashboard') ?>" class="text-sm text-gray-600 hover:text-gray-900">Dashboard</a>
+                    <a href="<?= base_url('/logout') ?>" class="text-sm text-gray-600 hover:text-gray-900">Keluar</a>
                 <?php else: ?>
-                    <a href="/login" class="text-sm text-gray-600 hover:text-gray-900">Masuk</a>
-                    <a href="/onboarding" class="btn btn-primary btn-sm">Mulai Gratis</a>
+                    <a href="<?= base_url('/login') ?>" class="text-sm text-gray-600 hover:text-gray-900">Masuk</a>
+                    <a href="<?= base_url('/onboarding') ?>" class="btn btn-primary btn-sm">Mulai Gratis</a>
                 <?php endif; ?>
             </div>
         </div>
