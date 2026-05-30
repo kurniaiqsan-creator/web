@@ -24,13 +24,13 @@
                 ['Seat Booking', 'Seat map interaktif, real‑time hold, dan anti double‑booking.', 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
                 ['E‑Ticket QR', 'Tiket digital dengan QR code unik, validasi on‑site real‑time.', 'M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zm0 9.75c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zm9.75-9.75c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z'],
                 ['Pembayaran Lokal', 'Integrasi Midtrans, Xendit, DOKU — VA, e‑wallet, kartu.', 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z'],
-            ] as [$title, $desc, $icon]): ?>
+            ] as [$featTitle, $featDesc, $featIcon]): ?>
                 <div class="card p-6 text-center">
                     <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-100">
-                        <svg class="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="<?= $icon ?>"/></svg>
+                        <svg class="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="<?= $featIcon ?>"/></svg>
                     </div>
-                    <h3 class="mt-4 font-semibold"><?= $title ?></h3>
-                    <p class="mt-2 text-sm text-gray-500"><?= $desc ?></p>
+                    <h3 class="mt-4 font-semibold"><?= $featTitle ?></h3>
+                    <p class="mt-2 text-sm text-gray-500"><?= $featDesc ?></p>
                 </div>
             <?php endforeach; ?>
         </div>
