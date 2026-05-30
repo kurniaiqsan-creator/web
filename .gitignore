@@ -1,0 +1,29 @@
+# Dependencies
+/vendor/
+node_modules/
+
+# Laravel / PHP
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Cache
+.cache/
+
+# Uploads (if any)
+/uploads/
+/public/uploads/
