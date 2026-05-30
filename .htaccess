@@ -1,9 +1,8 @@
 RewriteEngine On
 
-# If the request is for a real file or directory, serve it directly
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+# Jangan rewrite file/directory yang beneran ada
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 
-# Otherwise, route everything to public/index.php
-RewriteRule ^(.*)$ public/index.php?url=$1 [QSA,L]
+# Route ke index.php di root (bukan public/)
+RewriteRule ^(.*)$ index.php [QSA,L]
