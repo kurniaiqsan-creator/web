@@ -18,6 +18,23 @@
         <?php endif; ?>
     </div>
 
+    <?php if (!empty($activePromos)): ?>
+        <div class="alert alert-primary d-flex flex-wrap align-items-center gap-2 mb-4">
+            <i class="cil-gift fs-5"></i>
+            <span class="fw-semibold me-2">Promo aktif:</span>
+            <?php foreach ($activePromos as $p):
+                $label = $p['type'] === 'percentage'
+                    ? ('Diskon ' . rtrim(rtrim(number_format((float)$p['value'], 2, '.', ''), '0'), '.') . '%')
+                    : ('Potongan ' . View::formatRupiah((int)round((float)$p['value'])));
+            ?>
+                <span class="badge bg-primary me-1" title="Berlaku s/d <?= View::e(date('d M Y', strtotime($p['valid_to']))) ?>">
+                    <span class="font-monospace"><?= View::e($p['code']) ?></span> · <?= View::e($label) ?>
+                </span>
+            <?php endforeach; ?>
+            <span class="small text-medium-emphasis w-100 mt-1">Masukkan kode promo saat checkout.</span>
+        </div>
+    <?php endif; ?>
+
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card">
@@ -168,6 +185,23 @@ function gaPicker() {
             <p class="mt-3 text-medium-emphasis" style="max-width:48rem"><?= View::e($event['description']) ?></p>
         <?php endif; ?>
     </div>
+
+    <?php if (!empty($activePromos)): ?>
+        <div class="alert alert-primary d-flex flex-wrap align-items-center gap-2 mb-4">
+            <i class="cil-gift fs-5"></i>
+            <span class="fw-semibold me-2">Promo aktif:</span>
+            <?php foreach ($activePromos as $p):
+                $label = $p['type'] === 'percentage'
+                    ? ('Diskon ' . rtrim(rtrim(number_format((float)$p['value'], 2, '.', ''), '0'), '.') . '%')
+                    : ('Potongan ' . View::formatRupiah((int)round((float)$p['value'])));
+            ?>
+                <span class="badge bg-primary me-1" title="Berlaku s/d <?= View::e(date('d M Y', strtotime($p['valid_to']))) ?>">
+                    <span class="font-monospace"><?= View::e($p['code']) ?></span> · <?= View::e($label) ?>
+                </span>
+            <?php endforeach; ?>
+            <span class="small text-medium-emphasis w-100 mt-1">Masukkan kode promo saat checkout.</span>
+        </div>
+    <?php endif; ?>
 
     <div class="row g-4">
         <div class="col-lg-8">

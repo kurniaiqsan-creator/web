@@ -61,6 +61,28 @@ class PublicController
             );
         }
 
+        // Promo aktif untuk event ini (untuk ditampilkan di halaman event).
+        $promos = Database::fetchAll(
+            "SELECT code, type, value, valid_to, applicable_event_ids
+             FROM promotions
+             WHERE tenant_id = ?
+               AND NOW() BETWEEN valid_from AND valid_to
+               AND (usage_limit = 0 OR used_count < usage_limit)
+             ORDER BY value DESC",
+            [$tenant['id']]
+        );
+        // Saring: hanya promo yang applicable ke event ini (atau berlaku semua event).
+        $activePromos = [];
+        foreach ($promos as $p) {
+            $applicable = json_decode($p['applicable_event_ids'] ?? 'null', true);
+            if (is_array($applicable) && !empty($applicable)) {
+                if (!in_array((int)$event['id'], array_map('intval', $applicable), true)) {
+                    continue;
+                }
+            }
+            $activePromos[] = $p;
+        }
+
         return View::render('public/event', [
             'title'   => $event['title'],
             'tenant'  => $tenant,
@@ -68,6 +90,7 @@ class PublicController
             'categories' => $categories,
             'seats'   => $seats,
             'gaTiers' => $gaTiers,
+            'activePromos' => $activePromos,
         ]);
     }
 
