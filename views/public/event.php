@@ -207,7 +207,15 @@ function gaPicker() {
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h2 class="h6 fw-semibold mb-0">Pilih Kursi</h2>
+                    <?php $availCount = count(array_filter($seats, fn($s) => ($s['status'] ?? '') === 'available')); ?>
+                    <h2 class="h6 fw-semibold mb-0">
+                        Pilih Kursi
+                        <?php if ($availCount > 0): ?>
+                            <span class="badge bg-success-subtle text-success-emphasis ms-1">Tersisa <?= $availCount ?> kursi</span>
+                        <?php else: ?>
+                            <span class="badge bg-danger-subtle text-danger-emphasis ms-1">Habis</span>
+                        <?php endif; ?>
+                    </h2>
                     <div class="d-flex gap-3 small text-medium-emphasis">
                         <span><span class="seat-legend-dot available"></span> Tersedia</span>
                         <span><span class="seat-legend-dot sold"></span> Terjual</span>

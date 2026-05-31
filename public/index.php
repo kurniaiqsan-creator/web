@@ -221,6 +221,10 @@ $router->get('/{tenantSlug}/events/{eventSlug}/confirmation', function (string $
     return (new PublicController())->confirmation($tenantSlug, $eventSlug);
 });
 
+$router->post('/{tenantSlug}/events/{eventSlug}/cancel-order', function (string $tenantSlug, string $eventSlug) {
+    return (new PublicController())->cancelOrder($tenantSlug, $eventSlug);
+});
+
 // Dispatch
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_GET['url'] ?? '/';

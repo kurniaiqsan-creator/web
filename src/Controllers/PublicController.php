@@ -130,6 +130,7 @@ class PublicController
         ) : null;
 
         $tickets = [];
+        $paymentUrl = null;
         if ($order) {
             $tickets = Database::fetchAll(
                 "SELECT t.*, e.title as event_title, e.start_time, v.name as venue_name
@@ -139,15 +140,73 @@ class PublicController
                  WHERE t.order_id = ? ORDER BY t.id ASC",
                 [$order['id']]
             );
+
+            // Order masih pending → sediakan link bayar Pakasir untuk retry.
+            if ($order['status'] === 'pending') {
+                $settings = json_decode($tenant['settings'] ?? '{}', true);
+                $pakasir = Pakasir::fromConfig(is_array($settings) ? $settings : []);
+                if ($pakasir !== null) {
+                    $redirect = base_url('/' . $tenant['slug'] . '/events/' . $order['event_id'] . '/confirmation?order=' . rawurlencode((string)$order['order_code']));
+                    $paymentUrl = $pakasir->paymentUrl((int)$order['total_amount_cents'], (string)$order['order_code'], $redirect, 'all');
+                }
+            }
         }
 
         return View::render('public/confirmation', [
-            'title'     => 'Konfirmasi',
-            'tenant'    => $tenant,
-            'order'     => $order,
-            'orderCode' => $order['order_code'] ?? $orderCode,
-            'tickets'   => $tickets,
+            'title'      => 'Konfirmasi',
+            'tenant'     => $tenant,
+            'order'      => $order,
+            'orderCode'  => $order['order_code'] ?? $orderCode,
+            'tickets'    => $tickets,
+            'paymentUrl' => $paymentUrl,
+            'sandbox'    => Pakasir::isSandbox(),
         ]);
+    }
+
+    /**
+     * POST /{slug}/events/{id}/cancel-order — batalkan order pending milik tenant ini.
+     */
+    public function cancelOrder(string $tenantSlug, string $eventSlug): string
+    {
+        $tenant = Database::fetch('SELECT * FROM tenants WHERE slug = ?', [$tenantSlug]);
+        if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
+
+        $orderCode = (string)($_POST['order'] ?? '');
+        $order = $orderCode !== ''
+            ? Database::fetch('SELECT * FROM orders WHERE order_code = ? AND tenant_id = ?', [$orderCode, $tenant['id']])
+            : null;
+
+        if ($order && $order['status'] === 'pending') {
+            Database::beginTransaction();
+            try {
+                Database::update('orders', ['status' => 'cancelled'], 'id = ?', [(int)$order['id']]);
+                // Lepas kursi yang diblokir order ini.
+                Database::query(
+                    "UPDATE seats s
+                     JOIN order_items oi ON oi.event_id = s.event_id AND oi.seat_label = s.seat_label
+                     SET s.status = 'available'
+                     WHERE oi.order_id = ? AND s.status = 'blocked'",
+                    [(int)$order['id']]
+                );
+                // Lepas held GA.
+                Database::query(
+                    "UPDATE event_inventory ei
+                     JOIN (SELECT category_id, COUNT(*) qty FROM order_items
+                           WHERE order_id = ? AND seat_label IS NULL AND category_id IS NOT NULL
+                           GROUP BY category_id) rel ON rel.category_id = ei.category_id
+                     SET ei.held = GREATEST(ei.held - rel.qty, 0)
+                     WHERE ei.event_id = ?",
+                    [(int)$order['id'], (int)$order['event_id']]
+                );
+                Database::commit();
+                Session::flash('Pesanan dibatalkan', 'success');
+            } catch (Throwable $e) {
+                Database::rollback();
+                Session::flash('Gagal membatalkan pesanan', 'error');
+            }
+        }
+
+        Router::redirect('/' . $tenant['slug'] . '/events/' . $eventSlug . '/confirmation?order=' . rawurlencode($orderCode));
     }
 
     public function eticket(string $token): string

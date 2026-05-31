@@ -14,6 +14,7 @@
             </div>
         </div>
     <?php else: ?>
+        <?php if ($order['status'] === 'paid'): ?>
         <div class="card text-center mb-4">
             <div class="card-body p-4">
                 <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-10 mb-3"
@@ -89,6 +90,60 @@
                 </div>
             <?php endforeach; ?>
         </div>
+
+        <?php elseif ($order['status'] === 'pending'): ?>
+        <!-- PENDING: retry / cancel -->
+        <div class="card text-center mb-4">
+            <div class="card-body p-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning bg-opacity-10 mb-3"
+                     style="width:64px;height:64px">
+                    <i class="cil-clock fs-1 text-warning"></i>
+                </div>
+                <h1 class="h4 fw-bold mb-1">Menunggu Pembayaran</h1>
+                <p class="small text-medium-emphasis mb-3">
+                    Order <span class="font-monospace fw-semibold"><?= View::e($orderCode) ?></span>
+                </p>
+                <div class="d-flex justify-content-center align-items-center gap-3 mb-4">
+                    <span class="badge text-bg-warning">Pending</span>
+                    <span class="text-medium-emphasis"><?= View::formatRupiah($order['total_amount_cents']) ?></span>
+                </div>
+
+                <div class="d-flex flex-column gap-2" style="max-width:20rem;margin:0 auto">
+                    <?php if (!empty($paymentUrl)): ?>
+                        <a href="<?= View::e($paymentUrl) ?>" class="btn btn-primary"><i class="cil-credit-card me-1"></i>Lanjutkan Pembayaran</a>
+                    <?php else: ?>
+                        <div class="alert alert-warning small mb-0">Payment gateway belum dikonfigurasi. Hubungi penyelenggara.</div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($sandbox)): ?>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="simulatePay('<?= View::e($orderCode) ?>')">(Dev) Simulasi Bayar Sukses</button>
+                    <?php endif; ?>
+
+                    <form method="post" action="<?= base_url('/' . $tenant['slug'] . '/events/' . $order['event_id'] . '/cancel-order') ?>"
+                          onsubmit="return confirm('Batalkan pesanan ini? Kursi akan dilepas.')">
+                        <input type="hidden" name="order" value="<?= View::e($orderCode) ?>">
+                        <button type="submit" class="btn btn-link text-danger btn-sm">Batalkan Pesanan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <p class="text-center small text-medium-emphasis">Halaman ini akan menampilkan e-ticket otomatis setelah pembayaran dikonfirmasi.</p>
+
+        <?php else: /* cancelled / failed / refunded */ ?>
+        <div class="card text-center mb-4">
+            <div class="card-body p-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary bg-opacity-10 mb-3"
+                     style="width:64px;height:64px">
+                    <i class="cil-x-circle fs-1 text-secondary"></i>
+                </div>
+                <h1 class="h4 fw-bold mb-1">Pesanan <?= View::e(ucfirst($order['status'])) ?></h1>
+                <p class="small text-medium-emphasis mb-3">
+                    Order <span class="font-monospace fw-semibold"><?= View::e($orderCode) ?></span>
+                </p>
+                <a href="<?= base_url('/' . $tenant['slug'] . '/events/' . $order['event_id']) ?>" class="btn btn-primary mt-2">Pesan Lagi</a>
+            </div>
+        </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 
@@ -99,5 +154,15 @@
             new QRCode(el, { text: el.dataset.url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
         });
     });
+    async function simulatePay(code) {
+        try {
+            const res = await fetch(base_url('/api/v1/payments/simulate'), {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ order_code: code })
+            });
+            if (res.ok) { location.reload(); }
+            else { const d = await res.json(); showToast((d.error && d.error.message) || 'Gagal simulasi', 'error'); }
+        } catch (e) { showToast('Gagal simulasi', 'error'); }
+    }
 </script>
 <?php $content = ob_get_clean(); require VIEW_PATH . '/layouts/main.php'; ?>
