@@ -680,6 +680,103 @@ class AdminController
         return View::render('admin/scanner', ['title' => 'Scanner Tiket']);
     }
 
+    /**
+     * GET /admin/logs — audit log viewer. 3 tab: webhooks | notifications | scans.
+     * Notifikasi & scan di-scope per tenant; webhook pembayaran bersifat infra
+     * (tanpa kolom tenant) jadi ditampilkan global dengan catatan.
+     */
+    public function logs(): string
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $tab = (string)($_GET['tab'] ?? 'notifications');
+        if (!in_array($tab, ['webhooks', 'notifications', 'scans'], true)) {
+            $tab = 'notifications';
+        }
+
+        $webhooks = [];
+        $notifications = [];
+        $scans = [];
+
+        if ($tab === 'webhooks') {
+            $webhooks = Database::fetchAll(
+                "SELECT id, provider, endpoint, success, response_code, verification_result, raw_request, processed_at, created_at
+                 FROM webhook_logs
+                 ORDER BY id DESC
+                 LIMIT 100"
+            );
+        } elseif ($tab === 'notifications') {
+            $notifications = Database::fetchAll(
+                "SELECT n.id, n.channel, n.recipient, n.subject, n.status, n.attempts,
+                        n.last_error, n.created_at, n.sent_at, o.order_code
+                 FROM notifications_outbox n
+                 LEFT JOIN orders o ON o.id = n.order_id
+                 WHERE n.tenant_id = ?
+                 ORDER BY n.id DESC
+                 LIMIT 100",
+                [$tenantId]
+            );
+        } else { // scans
+            $scans = Database::fetchAll(
+                "SELECT ts.id, ts.result, ts.scanner_id, ts.scanned_at,
+                        t.seat_label, t.ticket_token, o.order_code, e.title AS event_title,
+                        u.name AS scanned_by
+                 FROM ticket_scans ts
+                 JOIN tickets t ON t.id = ts.ticket_id
+                 JOIN orders o ON o.id = t.order_id
+                 LEFT JOIN events e ON e.id = t.event_id
+                 LEFT JOIN users u ON u.id = ts.scanned_by_user_id
+                 WHERE o.tenant_id = ?
+                 ORDER BY ts.id DESC
+                 LIMIT 100",
+                [$tenantId]
+            );
+        }
+
+        // Ringkasan kecil untuk badge counter di tab.
+        $counts = [
+            'notif_failed' => (int)(Database::fetch(
+                "SELECT COUNT(*) c FROM notifications_outbox WHERE tenant_id = ? AND status = 'failed'",
+                [$tenantId]
+            )['c'] ?? 0),
+            'webhook_failed' => (int)(Database::fetch(
+                "SELECT COUNT(*) c FROM webhook_logs WHERE success = 0"
+            )['c'] ?? 0),
+        ];
+
+        return View::render('admin/logs', [
+            'title'         => 'Log & Audit',
+            'tab'           => $tab,
+            'webhooks'      => $webhooks,
+            'notifications' => $notifications,
+            'scans'         => $scans,
+            'counts'        => $counts,
+        ]);
+    }
+
+    /**
+     * POST /admin/logs/notifications/{id}/retry — coba kirim ulang notifikasi gagal.
+     */
+    public function logRetryNotification(string $id): never
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $row = Database::fetch(
+            'SELECT * FROM notifications_outbox WHERE id = ? AND tenant_id = ?',
+            [(int)$id, $tenantId]
+        );
+        if (!$row) {
+            Session::flash('Notifikasi tidak ditemukan', 'error');
+            Router::redirect('/admin/logs?tab=notifications');
+        }
+        if ($row['status'] === 'sent') {
+            Session::flash('Notifikasi ini sudah terkirim', 'error');
+            Router::redirect('/admin/logs?tab=notifications');
+        }
+
+        $ok = Notifier::retry((int)$id);
+        Session::flash($ok ? 'Notifikasi berhasil dikirim ulang' : 'Gagal kirim ulang — cek konfigurasi/last_error', $ok ? 'success' : 'error');
+        Router::redirect('/admin/logs?tab=notifications');
+    }
+
     public function settings(): string
     {
         $tenantId = $_SESSION['tenant_id'] ?? 0;

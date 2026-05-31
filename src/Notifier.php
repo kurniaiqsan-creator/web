@@ -185,6 +185,55 @@ class Notifier
         return implode("\n", $lines);
     }
 
+    /**
+     * Coba kirim ulang satu baris outbox (dipakai dari admin log viewer).
+     * Return true kalau berhasil terkirim.
+     */
+    public static function retry(int $outboxId): bool
+    {
+        $row = Database::fetch('SELECT * FROM notifications_outbox WHERE id = ?', [$outboxId]);
+        if (!$row || $row['status'] === 'sent') {
+            return false;
+        }
+
+        $tenantSettings = self::tenantSettings((int)$row['tenant_id']);
+
+        // Naikkan counter percobaan.
+        Database::update('notifications_outbox',
+            ['attempts' => (int)$row['attempts'] + 1, 'status' => 'pending', 'last_error' => null],
+            'id = ?', [$outboxId]
+        );
+
+        if ($row['channel'] === 'email') {
+            $mailer = Mailer::fromConfig($tenantSettings);
+            if ($mailer === null) {
+                self::markFailed($outboxId, 'SMTP belum dikonfigurasi (Pengaturan > Notifikasi)');
+                return false;
+            }
+            $name = '';
+            if (!empty($row['order_id'])) {
+                $o = Database::fetch('SELECT customer_name FROM orders WHERE id = ?', [(int)$row['order_id']]);
+                $name = (string)($o['customer_name'] ?? '');
+            }
+            $res = $mailer->send((string)$row['recipient'], $name, (string)$row['subject'], (string)$row['body']);
+        } else { // whatsapp
+            $fonnte = Fonnte::fromConfig($tenantSettings);
+            if ($fonnte === null) {
+                self::markFailed($outboxId, 'Fonnte token belum dikonfigurasi (Pengaturan > Notifikasi)');
+                return false;
+            }
+            $res = $fonnte->send((string)$row['recipient'], (string)$row['body']);
+            $res['response'] = $res['response'] ?? '';
+        }
+
+        if (($res['ok'] ?? false) === true) {
+            self::markSent($outboxId, $res['response'] ?? '');
+            return true;
+        }
+        self::markFailed($outboxId, $res['error'] ?? 'Gagal kirim', $res['response'] ?? '');
+        return false;
+    }
+
     // ===== Helpers =====
 
     private static function ticketUrl(string $token): string

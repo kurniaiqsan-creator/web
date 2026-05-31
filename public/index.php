@@ -164,6 +164,8 @@ $router->group('/admin', function (Router $r) {
     $r->get('/customers/{id}', [AdminController::class, 'customerDetail']);
     $r->get('/reports', [AdminController::class, 'reports']);
     $r->get('/scanner', [AdminController::class, 'scanner']);
+    $r->get('/logs', [AdminController::class, 'logs']);
+    $r->post('/logs/notifications/{id}/retry', [AdminController::class, 'logRetryNotification']);
     $r->get('/settings', [AdminController::class, 'settings']);
     $r->post('/settings', [AdminController::class, 'settingsSave']);
 }, [adminMiddleware(...), tenantMiddleware(...)]);

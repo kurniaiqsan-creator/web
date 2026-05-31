@@ -32,6 +32,7 @@ $navGroups = [
         'title' => 'Insight',
         'items' => [
             ['/admin/reports',    'cil-chart',       'Laporan'],
+            ['/admin/logs',       'cil-list',        'Log & Audit'],
         ],
     ],
     [
