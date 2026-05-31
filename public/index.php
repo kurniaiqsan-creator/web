@@ -120,8 +120,27 @@ $router->group('/admin', function (Router $r) {
     $r->post('/venues/{id}', [AdminController::class, 'venueSave']);
     $r->post('/venues/{id}/delete', [AdminController::class, 'venueDelete']);
 
-    // Lain
+    // Orders
     $r->get('/orders', [AdminController::class, 'orders']);
+    $r->get('/orders/export', [AdminController::class, 'ordersExport']);
+    $r->get('/orders/{id}', [AdminController::class, 'orderDetail']);
+    $r->post('/orders/{id}/refund', [AdminController::class, 'orderRefund']);
+
+    // Ticket categories
+    $r->get('/ticket-categories', [AdminController::class, 'ticketCategories']);
+    $r->post('/ticket-categories', [AdminController::class, 'ticketCategorySave']);
+    $r->post('/ticket-categories/{id}', [AdminController::class, 'ticketCategorySave']);
+    $r->post('/ticket-categories/{id}/delete', [AdminController::class, 'ticketCategoryDelete']);
+
+    // Promotions
+    $r->get('/promotions', [AdminController::class, 'promotions']);
+    $r->get('/promotions/create', [AdminController::class, 'promotionEditor']);
+    $r->post('/promotions', [AdminController::class, 'promotionSave']);
+    $r->get('/promotions/{id}', [AdminController::class, 'promotionEditor']);
+    $r->post('/promotions/{id}', [AdminController::class, 'promotionSave']);
+    $r->post('/promotions/{id}/delete', [AdminController::class, 'promotionDelete']);
+
+    // Lain
     $r->get('/customers', [AdminController::class, 'customers']);
     $r->get('/customers/{id}', [AdminController::class, 'customerDetail']);
     $r->get('/reports', [AdminController::class, 'reports']);

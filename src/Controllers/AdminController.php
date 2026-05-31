@@ -543,4 +543,342 @@ class AdminController
 
         Router::redirect('/admin/settings');
     }
+
+    // ===== ORDERS (detail, refund, CSV export) =====
+
+    public function orderDetail(string $id): string
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+
+        $order = Database::fetch(
+            "SELECT o.*, e.title AS event_title, e.start_time AS event_start, v.name AS venue_name, u.name AS user_name, u.email AS user_email
+             FROM orders o
+             LEFT JOIN events e ON e.id = o.event_id
+             LEFT JOIN venues v ON v.id = e.venue_id
+             LEFT JOIN users u  ON u.id = o.user_id
+             WHERE o.id = ? AND o.tenant_id = ?",
+            [(int)$id, $tenantId]
+        );
+
+        if (!$order) {
+            http_response_code(404);
+            return Router::renderError(404, 'Pesanan tidak ditemukan');
+        }
+
+        $items = Database::fetchAll(
+            "SELECT oi.*, tc.name AS category_name
+             FROM order_items oi
+             LEFT JOIN ticket_categories tc ON tc.id = oi.category_id
+             WHERE oi.order_id = ?",
+            [(int)$id]
+        );
+
+        $tickets = Database::fetchAll(
+            'SELECT * FROM tickets WHERE order_id = ? ORDER BY id',
+            [(int)$id]
+        );
+
+        $refunds = Database::fetchAll(
+            'SELECT * FROM refunds WHERE order_id = ? ORDER BY created_at DESC',
+            [(int)$id]
+        );
+
+        return View::render('admin/order-detail', [
+            'title'   => 'Pesanan ' . ($order['order_code'] ?? ''),
+            'order'   => $order,
+            'items'   => $items,
+            'tickets' => $tickets,
+            'refunds' => $refunds,
+        ]);
+    }
+
+    /**
+     * POST /admin/orders/{id}/refund — stub refund (catat di tabel refunds, set order.status=refunded,
+     * tickets.status=refunded). Belum panggil PG sungguhan; itu masih BLOCKED di ROADMAP.
+     */
+    public function orderRefund(string $id): never
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $order = Database::fetch('SELECT * FROM orders WHERE id = ? AND tenant_id = ?', [(int)$id, $tenantId]);
+
+        if (!$order) {
+            Session::flash('Pesanan tidak ditemukan', 'error');
+            Router::redirect('/admin/orders');
+        }
+        if (($order['status'] ?? '') !== 'paid') {
+            Session::flash('Hanya pesanan berstatus Lunas yang bisa di-refund', 'error');
+            Router::redirect("/admin/orders/{$id}");
+        }
+
+        $reason  = trim((string)($_POST['reason'] ?? '')) ?: 'Refund manual oleh admin';
+        $amount  = (int)($_POST['amount_cents'] ?? 0);
+        if ($amount <= 0) $amount = (int)$order['total_amount_cents'];
+
+        try {
+            Database::beginTransaction();
+
+            Database::insert('refunds', [
+                'refund_uid'  => bin2hex(random_bytes(8)),
+                'order_id'    => (int)$id,
+                'amount_cents'=> $amount,
+                'reason'      => $reason,
+                'status'      => 'succeeded', // stub: anggap berhasil
+            ]);
+
+            Database::update('orders',
+                ['status' => 'refunded'],
+                'id = ? AND tenant_id = ?', [(int)$id, $tenantId]
+            );
+            Database::query(
+                'UPDATE tickets SET status = ? WHERE order_id = ?',
+                ['refunded', (int)$id]
+            );
+            // Lepas seat: kembalikan ke available kalau sebelumnya sold via tiket order ini.
+            Database::query(
+                "UPDATE seats s
+                 JOIN order_items oi ON oi.event_id = s.event_id AND oi.seat_label = s.seat_label
+                 SET s.status = 'available'
+                 WHERE oi.order_id = ? AND s.status = 'sold'",
+                [(int)$id]
+            );
+
+            Database::commit();
+            Session::flash('Refund tercatat (stub). Saldo PG belum di-trigger.', 'success');
+        } catch (Throwable $e) {
+            Database::rollback();
+            error_log('orderRefund error: ' . $e->getMessage());
+            Session::flash('Gagal refund: ' . $e->getMessage(), 'error');
+        }
+
+        Router::redirect("/admin/orders/{$id}");
+    }
+
+    /**
+     * GET /admin/orders/export — stream CSV semua order untuk tenant.
+     */
+    public function ordersExport(): never
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $orders = Database::fetchAll(
+            "SELECT o.order_code, o.status, o.total_amount_cents, o.currency,
+                    o.customer_name, o.customer_email, o.customer_phone,
+                    o.payment_provider, o.payment_reference, o.created_at,
+                    e.title AS event_title
+             FROM orders o
+             LEFT JOIN events e ON e.id = o.event_id
+             WHERE o.tenant_id = ?
+             ORDER BY o.created_at DESC",
+            [$tenantId]
+        );
+
+        $filename = 'orders-' . date('Y-m-d-His') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: no-store');
+
+        $out = fopen('php://output', 'w');
+        // UTF-8 BOM supaya Excel bisa render karakter non-ASCII.
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, [
+            'Order Code', 'Status', 'Total', 'Currency',
+            'Customer Name', 'Customer Email', 'Customer Phone',
+            'Provider', 'Reference', 'Created At', 'Event',
+        ]);
+        foreach ($orders as $o) {
+            fputcsv($out, [
+                $o['order_code'], $o['status'],
+                (int)$o['total_amount_cents'], // schema-nya pakai "_cents" tapi value sebenarnya rupiah (View::formatRupiah tidak bagi 100)
+                strtoupper((string)$o['currency']),
+                $o['customer_name'], $o['customer_email'], $o['customer_phone'],
+                $o['payment_provider'], $o['payment_reference'],
+                $o['created_at'], $o['event_title'],
+            ]);
+        }
+        fclose($out);
+        exit;
+    }
+
+    // ===== TICKET CATEGORIES =====
+
+    public function ticketCategories(): string
+    {
+        $tenantId = $_SESSION['tenant_id'] ?? 0;
+        $categories = Database::fetchAll(
+            "SELECT tc.*, COUNT(s.id) AS used_seats
+             FROM ticket_categories tc
+             LEFT JOIN seats s ON s.category_id = tc.id
+             WHERE tc.tenant_id = ?
+             GROUP BY tc.id
+             ORDER BY tc.price_cents DESC",
+            [$tenantId]
+        );
+
+        return View::render('admin/ticket-categories', [
+            'title' => 'Tiket & Harga', 'categories' => $categories,
+        ]);
+    }
+
+    public function ticketCategorySave(?string $id = null): never
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $name     = trim((string)($_POST['name'] ?? ''));
+        $price    = (int)($_POST['price_cents'] ?? 0);
+        $quota    = (int)($_POST['quota'] ?? 0);
+
+        if ($name === '') {
+            Session::flash('Nama kategori wajib diisi', 'error');
+            Router::redirect('/admin/ticket-categories');
+        }
+        if ($price < 0 || $quota < 0) {
+            Session::flash('Harga & kuota tidak boleh negatif', 'error');
+            Router::redirect('/admin/ticket-categories');
+        }
+
+        $data = [
+            'tenant_id'   => $tenantId,
+            'name'        => $name,
+            'price_cents' => $price,
+            'quota'       => $quota,
+        ];
+
+        if ($id) {
+            $exists = Database::fetch('SELECT id FROM ticket_categories WHERE id = ? AND tenant_id = ?', [(int)$id, $tenantId]);
+            if (!$exists) {
+                Session::flash('Kategori tidak ditemukan', 'error');
+                Router::redirect('/admin/ticket-categories');
+            }
+            Database::update('ticket_categories', $data, 'id = ? AND tenant_id = ?', [(int)$id, $tenantId]);
+            Session::flash('Kategori diperbarui');
+        } else {
+            Database::insert('ticket_categories', $data);
+            Session::flash('Kategori dibuat');
+        }
+
+        Router::redirect('/admin/ticket-categories');
+    }
+
+    public function ticketCategoryDelete(string $id): never
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $used = Database::fetch('SELECT COUNT(*) AS c FROM seats WHERE category_id = ?', [(int)$id]);
+        if (((int)($used['c'] ?? 0)) > 0) {
+            Session::flash('Kategori masih dipakai oleh kursi event', 'error');
+            Router::redirect('/admin/ticket-categories');
+        }
+        Database::query('DELETE FROM ticket_categories WHERE id = ? AND tenant_id = ?', [(int)$id, $tenantId]);
+        Session::flash('Kategori dihapus');
+        Router::redirect('/admin/ticket-categories');
+    }
+
+    // ===== PROMOTIONS =====
+
+    public function promotions(): string
+    {
+        $tenantId = $_SESSION['tenant_id'] ?? 0;
+        $promotions = Database::fetchAll(
+            "SELECT * FROM promotions WHERE tenant_id = ? ORDER BY valid_to DESC, id DESC",
+            [$tenantId]
+        );
+
+        return View::render('admin/promotions', [
+            'title' => 'Promosi', 'promotions' => $promotions,
+        ]);
+    }
+
+    public function promotionEditor(string $id = null): string
+    {
+        $tenantId = $_SESSION['tenant_id'] ?? 0;
+        $promotion = $id
+            ? Database::fetch('SELECT * FROM promotions WHERE id = ? AND tenant_id = ?', [(int)$id, $tenantId])
+            : null;
+
+        $events = Database::fetchAll(
+            "SELECT id, title FROM events WHERE tenant_id = ? AND status <> 'cancelled' ORDER BY start_time DESC",
+            [$tenantId]
+        );
+
+        if ($promotion) {
+            $promotion['applicable_event_ids'] = json_decode($promotion['applicable_event_ids'] ?? '[]', true) ?: [];
+        }
+
+        return View::render('admin/promotion-editor', [
+            'title'     => $promotion ? 'Edit Promo' : 'Buat Promo',
+            'promotion' => $promotion,
+            'events'    => $events,
+        ]);
+    }
+
+    public function promotionSave(?string $id = null): never
+    {
+        $tenantId   = (int)($_SESSION['tenant_id'] ?? 0);
+        $code       = strtoupper(trim((string)($_POST['code'] ?? '')));
+        $type       = (string)($_POST['type'] ?? 'percentage');
+        $value      = (float)($_POST['value'] ?? 0);
+        $usageLimit = (int)($_POST['usage_limit'] ?? 0);
+        $validFrom  = (string)($_POST['valid_from'] ?? '');
+        $validTo    = (string)($_POST['valid_to'] ?? '');
+        $events     = $_POST['applicable_event_ids'] ?? [];
+        if (!is_array($events)) $events = [];
+        $events = array_values(array_filter(array_map('intval', $events)));
+
+        if ($code === '')      { Session::flash('Kode promo wajib diisi', 'error'); Router::redirect($id ? "/admin/promotions/{$id}" : '/admin/promotions/create'); }
+        if (!in_array($type, ['percentage', 'fixed'], true)) $type = 'percentage';
+        if ($value <= 0)       { Session::flash('Nilai diskon harus > 0', 'error'); Router::redirect($id ? "/admin/promotions/{$id}" : '/admin/promotions/create'); }
+        if ($type === 'percentage' && $value > 100) {
+            Session::flash('Diskon persentase tidak boleh > 100%', 'error');
+            Router::redirect($id ? "/admin/promotions/{$id}" : '/admin/promotions/create');
+        }
+        if ($validFrom === '' || $validTo === '') {
+            Session::flash('Tanggal valid_from & valid_to wajib diisi', 'error');
+            Router::redirect($id ? "/admin/promotions/{$id}" : '/admin/promotions/create');
+        }
+        if (strtotime($validTo) < strtotime($validFrom)) {
+            Session::flash('valid_to harus setelah valid_from', 'error');
+            Router::redirect($id ? "/admin/promotions/{$id}" : '/admin/promotions/create');
+        }
+
+        // Cek code unik per tenant.
+        $where  = 'code = ? AND tenant_id = ?';
+        $params = [$code, $tenantId];
+        if ($id) { $where .= ' AND id <> ?'; $params[] = (int)$id; }
+        $dup = Database::fetch("SELECT id FROM promotions WHERE $where", $params);
+        if ($dup) {
+            Session::flash("Kode '$code' sudah dipakai", 'error');
+            Router::redirect($id ? "/admin/promotions/{$id}" : '/admin/promotions/create');
+        }
+
+        $data = [
+            'tenant_id'            => $tenantId,
+            'code'                 => $code,
+            'type'                 => $type,
+            'value'                => $value,
+            'usage_limit'          => $usageLimit,
+            'valid_from'           => str_replace('T', ' ', $validFrom) . (substr_count($validFrom, ':') === 1 ? ':00' : ''),
+            'valid_to'             => str_replace('T', ' ', $validTo) . (substr_count($validTo, ':') === 1 ? ':00' : ''),
+            'applicable_event_ids' => $events ? json_encode($events) : null,
+        ];
+
+        if ($id) {
+            $exists = Database::fetch('SELECT id FROM promotions WHERE id = ? AND tenant_id = ?', [(int)$id, $tenantId]);
+            if (!$exists) {
+                Session::flash('Promo tidak ditemukan', 'error');
+                Router::redirect('/admin/promotions');
+            }
+            Database::update('promotions', $data, 'id = ? AND tenant_id = ?', [(int)$id, $tenantId]);
+            Session::flash('Promo diperbarui');
+        } else {
+            Database::insert('promotions', $data);
+            Session::flash('Promo dibuat');
+        }
+
+        Router::redirect('/admin/promotions');
+    }
+
+    public function promotionDelete(string $id): never
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        Database::query('DELETE FROM promotions WHERE id = ? AND tenant_id = ?', [(int)$id, $tenantId]);
+        Session::flash('Promo dihapus');
+        Router::redirect('/admin/promotions');
+    }
 }

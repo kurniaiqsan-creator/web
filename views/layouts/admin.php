@@ -19,24 +19,26 @@ $navGroups = [
     [
         'title' => 'Operasional',
         'items' => [
-            ['/admin/dashboard', 'cil-speedometer', 'Dashboard'],
-            ['/admin/events',    'cil-calendar',    'Event'],
-            ['/admin/venues',    'cil-room',        'Venue'],
-            ['/admin/orders',    'cil-cart',        'Pesanan'],
-            ['/admin/customers', 'cil-people',      'Customer'],
-            ['/admin/scanner',   'cil-qr-code',     'Scanner Tiket'],
+            ['/admin/dashboard',  'cil-speedometer', 'Dashboard'],
+            ['/admin/events',     'cil-calendar',    'Event'],
+            ['/admin/venues',     'cil-room',        'Venue'],
+            ['/admin/orders',     'cil-cart',        'Pesanan'],
+            ['/admin/customers',  'cil-people',      'Customer'],
+            ['/admin/scanner',    'cil-qr-code',     'Scanner Tiket'],
         ],
     ],
     [
         'title' => 'Insight',
         'items' => [
-            ['/admin/reports',   'cil-chart',       'Laporan'],
+            ['/admin/reports',    'cil-chart',       'Laporan'],
         ],
     ],
     [
         'title' => 'Setup',
         'items' => [
-            ['/admin/settings',  'cil-settings',    'Pengaturan'],
+            ['/admin/ticket-categories', 'cil-tag',  'Tiket & Harga'],
+            ['/admin/promotions', 'cil-gift',        'Promosi'],
+            ['/admin/settings',   'cil-settings',    'Pengaturan'],
         ],
     ],
 ];
