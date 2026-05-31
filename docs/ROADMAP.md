@@ -59,7 +59,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Editor event (`/admin/events/create`, `/admin/events/{id}`) jadi real form, submit ke `POST /admin/events[/{id}]`. Simpan `events.{title,description,venue_id,start_time,end_time,status,settings}` + replace seat map (kecuali ada seat yang sudah sold di mode edit → safeguard, layout tidak dirombak).
 - [x] **DONE** — Tombol "Simpan Draft" / "Publish" set `status='draft'` / `'published'`.
 - [x] **DONE** — Cancel event via `POST /admin/events/{id}/delete` → set `status='cancelled'`.
-- [ ] **TODO** — Editor tab "Tiket & Harga" untuk CRUD `ticket_categories` (sekarang baca-aja).
+- [x] **DONE** — Page CRUD ticket categories (`/admin/ticket-categories`): inline edit row + create modal + delete (guard: tolak hapus jika dipakai seat). Lihat **3.10**.
 - [ ] **TODO** — Soft-delete event (kolom `deleted_at` perlu ditambah ke schema). Saat ini hanya status='cancelled'.
 
 #### 3.3 Venue Management
@@ -69,9 +69,9 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 #### 3.4 Orders (Pesanan)
 
 - [x] **DONE** — List orders (`/admin/orders` → `views/admin/orders.php`).
-- [ ] **TODO** — Detail order page (sekarang link `?detail={id}` tidak ada handler).
-- [~] **STUB** — Tombol "Export CSV" hanya `showToast` simulasi.
-- [~] **STUB** — Tombol "Refund" hanya `showToast` simulasi. Schema `refunds` sudah ada.
+- [x] **DONE** — Detail order page (`/admin/orders/{id}`) — items + tickets + refunds + customer + event + payment cards.
+- [x] **DONE** — Export CSV (`GET /admin/orders/export`) — UTF-8 BOM, stream langsung, kolom code/status/total/customer/event.
+- [x] **DONE** — Refund (stub PG): `POST /admin/orders/{id}/refund` insert ke `refunds`, set `orders.status='refunded'`, `tickets.status='refunded'`, lepas seat ke `available`. Saldo real di PG masih BLOCKED.
 - [ ] **TODO** — Filter status, tanggal, search.
 
 #### 3.5 Customer (BARU di PR #2)
@@ -98,13 +98,19 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 #### 3.8 Promotions / Coupons
 
-- [ ] **TODO** — Tidak ada admin page sama sekali. Schema `promotions` ada.
-- [ ] **TODO** — Route `/admin/promotions` (CRUD) + integrasi di checkout (`ApiController::evaluatePromo` sudah ada, perlu di-hook).
+- [x] **DONE** — CRUD page `/admin/promotions`: list dengan badge status (Aktif/Habis/Kedaluwarsa/Akan datang), create/edit form (code unik per tenant, type percentage/fixed, value, usage_limit, valid_from/to, applicable_event_ids), delete.
+- [ ] **TODO** — Integrasi di checkout: `ApiController::evaluatePromo` sudah ada — perlu test end-to-end dengan kode `PROMO10` yang ter-seed.
 
 #### 3.9 Settings (Pengaturan)
 
 - [x] **DONE** — `AdminController::settingsSave()` + `POST /admin/settings` (3 section: `branding`, `payment`, `notifications`). Branding update `tenants.name` + `tenants.branding.{primary_color,email_from,reply_to}`. Payment + notifications nyimpen ke `tenants.settings.{payment,notifications}`. Field password masked (`••••••••••`) tidak di-overwrite kalau user tidak ganti.
 - [ ] **TODO** — Upload logo (perlu storage; bisa filesystem dulu).
+
+#### 3.10 Ticket Categories (Tiket & Harga) — BARU di PR #5
+
+- [x] **DONE** — `/admin/ticket-categories`: list inline-edit (form per-row via HTML5 `form=""` attribute), create modal, delete (guard: tolak hapus jika ada `seats.category_id = ?`).
+- [x] **DONE** — Sidebar entry baru di group **Setup** dengan icon `cil-tag`.
+- [ ] **TODO** — Inline CRUD dari dalam event editor (currently link out ke `/admin/ticket-categories`).
 
 ### 4. Customer Flow (Public)
 

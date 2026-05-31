@@ -2,7 +2,7 @@
 <div>
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div><h1 class="fs-3 fw-bold mb-1">Pesanan</h1><p class="text-medium-emphasis mb-0">Kelola semua pesanan tiket</p></div>
-        <button class="btn btn-outline-secondary" onclick="showToast('CSV diekspor (simulasi)')"><i class="cil-data-transfer-down me-1"></i>Export CSV</button>
+        <a class="btn btn-outline-secondary" href="<?= base_url('/admin/orders/export') ?>"><i class="cil-data-transfer-down me-1"></i>Export CSV</a>
     </div>
 
     <div class="card">
@@ -45,12 +45,7 @@
                                 <td class="d-none d-md-table-cell text-uppercase small text-medium-emphasis"><?= View::e($o['payment_provider']) ?></td>
                                 <td class="d-none d-md-table-cell text-medium-emphasis small"><?= date('d M Y, H:i', strtotime($o['created_at'])) ?></td>
                                 <td class="text-end pe-4">
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="/admin/orders?detail=<?= $o['id'] ?>" class="btn btn-outline-primary"><i class="cil-search"></i></a>
-                                        <?php if ($o['status'] === 'paid'): ?>
-                                            <button class="btn btn-outline-danger" onclick="showToast('Refund diproses')"><i class="cil-action-undo"></i></button>
-                                        <?php endif; ?>
-                                    </div>
+                                    <a href="<?= base_url('/admin/orders/' . $o['id']) ?>" class="btn btn-sm btn-outline-primary"><i class="cil-search me-1"></i>Detail</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
