@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@3.1.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplebar@6.3.0/dist/simplebar.min.css">
     <link rel="stylesheet" href="<?= base_url('/assets/css/visi.css') ?>">
+    <?= Branding::styleTag() ?>
 
     <script src="<?= base_url('/assets/js/color-modes.js') ?>"></script>
 </head>

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.4.1/dist/css/coreui.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@3.1.0/css/all.min.css">
     <link rel="stylesheet" href="<?= base_url('/assets/css/visi.css') ?>">
+    <?= Branding::styleTag($tenant ?? null) ?>
 
     <script src="<?= base_url('/assets/js/color-modes.js') ?>"></script>
 </head>
