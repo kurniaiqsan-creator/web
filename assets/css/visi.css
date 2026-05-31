@@ -1,0 +1,163 @@
+/**
+ * Visi — CoreUI customizations
+ *
+ * Tema diatur lewat atribut [data-coreui-theme="light|dark"] di <html>.
+ * Hindari hardcode warna sidebar/page agar mode terang & gelap mengikuti palet CoreUI.
+ */
+
+:root,
+[data-coreui-theme="light"] {
+  --cui-primary: #f97316;
+  --cui-primary-rgb: 249, 115, 22;
+
+  --visi-seat-available: #10b981;
+  --visi-seat-available-stroke: #059669;
+  --visi-seat-sold: #ef4444;
+  --visi-seat-sold-stroke: #dc2626;
+  --visi-seat-blocked: #d1d5db;
+  --visi-seat-blocked-stroke: #9ca3af;
+  --visi-seat-selected: #f97316;
+  --visi-seat-selected-stroke: #c2410c;
+}
+
+[data-coreui-theme="dark"] {
+  --cui-primary: #fb923c;
+  --cui-primary-rgb: 251, 146, 60;
+
+  --visi-seat-available: #34d399;
+  --visi-seat-available-stroke: #10b981;
+  --visi-seat-sold: #f87171;
+  --visi-seat-sold-stroke: #ef4444;
+  --visi-seat-blocked: #4b5563;
+  --visi-seat-blocked-stroke: #6b7280;
+  --visi-seat-selected: #fb923c;
+  --visi-seat-selected-stroke: #f97316;
+}
+
+/* Primary button uses brand orange palette in both modes.
+ * Selector matches specificity of CoreUI dark-mode overrides ([data-coreui-theme="dark"] .btn-primary).
+ */
+[data-coreui-theme="light"] .btn-primary,
+[data-coreui-theme="dark"] .btn-primary {
+  --cui-btn-bg: var(--cui-primary);
+  --cui-btn-border-color: var(--cui-primary);
+  --cui-btn-color: #fff;
+  --cui-btn-hover-bg: #ea580c;
+  --cui-btn-hover-border-color: #ea580c;
+  --cui-btn-hover-color: #fff;
+  --cui-btn-active-bg: #c2410c;
+  --cui-btn-active-border-color: #c2410c;
+  --cui-btn-active-color: #fff;
+  --cui-btn-disabled-bg: var(--cui-primary);
+  --cui-btn-disabled-border-color: var(--cui-primary);
+  --cui-btn-disabled-color: #fff;
+}
+
+[data-coreui-theme="light"] .btn-outline-primary,
+[data-coreui-theme="dark"] .btn-outline-primary {
+  --cui-btn-color: var(--cui-primary);
+  --cui-btn-border-color: var(--cui-primary);
+  --cui-btn-hover-bg: var(--cui-primary);
+  --cui-btn-hover-border-color: var(--cui-primary);
+  --cui-btn-hover-color: #fff;
+  --cui-btn-active-bg: #c2410c;
+  --cui-btn-active-border-color: #c2410c;
+  --cui-btn-active-color: #fff;
+}
+
+[data-coreui-theme="light"] .link-primary,
+[data-coreui-theme="dark"] .link-primary,
+[data-coreui-theme="light"] a:not(.btn):not(.nav-link):not(.page-link):not(.dropdown-item).text-primary,
+[data-coreui-theme="dark"] a:not(.btn):not(.nav-link):not(.page-link):not(.dropdown-item).text-primary {
+  color: var(--cui-primary) !important;
+}
+
+.text-primary {
+  color: var(--cui-primary) !important;
+}
+
+.bg-primary {
+  background-color: var(--cui-primary) !important;
+}
+
+.brand-mark {
+  background: var(--cui-primary);
+  color: #fff;
+}
+
+/* Sidebar layout — wrapper pushes right to clear the fixed sidebar (matches CoreUI template). */
+body {
+  background-color: var(--cui-tertiary-bg);
+}
+
+.wrapper {
+  width: 100%;
+  padding-inline: var(--cui-sidebar-occupy-start, 0) var(--cui-sidebar-occupy-end, 0);
+  transition: padding 0.15s;
+  will-change: auto;
+}
+
+@media (min-width: 768px) {
+  html:not(.sidebar-hidden) {
+    --cui-sidebar-occupy-start: 16rem;
+  }
+}
+
+/* Sidebar tweaks — pakai .sidebar-dark default CoreUI, hanya rapikan brand area. */
+.sidebar-brand .sidebar-brand-full,
+.sidebar-brand .sidebar-brand-narrow {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.sidebar.sidebar-dark .sidebar-nav .nav-link.active {
+  background: rgba(var(--cui-primary-rgb), 0.18);
+  color: #fff;
+}
+
+.sidebar.sidebar-dark .sidebar-nav .nav-link.active .nav-icon {
+  color: var(--cui-primary);
+}
+
+/* Theme toggle dropdown shows the active item with a tint. */
+.dropdown-item.active[data-coreui-theme-value],
+.dropdown-item.active[data-coreui-theme-value]:hover {
+  background: rgba(var(--cui-primary-rgb), 0.12);
+  color: var(--cui-body-color);
+}
+
+/* Seat map (SVG) — theme-aware via CSS vars. */
+.seat-available { fill: var(--visi-seat-available); stroke: var(--visi-seat-available-stroke); cursor: pointer; }
+.seat-available:hover { fill: var(--visi-seat-selected); }
+.seat-sold { fill: var(--visi-seat-sold); stroke: var(--visi-seat-sold-stroke); cursor: not-allowed; }
+.seat-blocked { fill: var(--visi-seat-blocked); stroke: var(--visi-seat-blocked-stroke); cursor: not-allowed; }
+.seat-selected { fill: var(--visi-seat-selected); stroke: var(--visi-seat-selected-stroke); }
+
+.seat-legend-dot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.2rem;
+  vertical-align: middle;
+}
+.seat-legend-dot.available { background: var(--visi-seat-available); }
+.seat-legend-dot.sold { background: var(--visi-seat-sold); }
+.seat-legend-dot.blocked { background: var(--visi-seat-blocked); }
+.seat-legend-dot.selected { background: var(--visi-seat-selected); }
+
+/* E-ticket card accent strip. */
+.eticket-accent {
+  height: 0.5rem;
+  background: var(--cui-primary);
+}
+
+/* Toast container (CoreUI built-in toast already styled — pin to top-right). */
+.visi-toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1090;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

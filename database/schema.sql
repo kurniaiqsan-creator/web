@@ -131,6 +131,9 @@ CREATE TABLE orders (
     user_id BIGINT NULL,
     event_id BIGINT NULL,
     order_code VARCHAR(64) NOT NULL UNIQUE,
+    customer_name VARCHAR(255) NULL,
+    customer_email VARCHAR(255) NULL,
+    customer_phone VARCHAR(32) NULL,
     total_amount_cents INT NOT NULL DEFAULT 0,
     currency VARCHAR(8) DEFAULT 'idr',
     status ENUM('pending','paid','failed','cancelled','refunded') DEFAULT 'pending',
@@ -140,6 +143,7 @@ CREATE TABLE orders (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_order_code (order_code),
     INDEX idx_tenant_status (tenant_id, status),
+    INDEX idx_tenant_customer (tenant_id, customer_email),
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

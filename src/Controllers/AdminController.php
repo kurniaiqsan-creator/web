@@ -89,6 +89,100 @@ class AdminController
         ]);
     }
 
+    public function customers(): string
+    {
+        $tenantId = $_SESSION['tenant_id'] ?? 0;
+
+        $customers = Database::fetchAll(
+            "SELECT
+                COALESCE(u.id, 0) AS user_id,
+                COALESCE(u.name, o.customer_name, '(tanpa nama)') AS name,
+                COALESCE(u.email, o.customer_email) AS email,
+                COALESCE(u.phone, o.customer_phone) AS phone,
+                COUNT(o.id) AS order_count,
+                COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total_amount_cents ELSE 0 END), 0) AS total_spent_cents,
+                COALESCE(SUM(CASE WHEN o.status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
+                MAX(o.created_at) AS last_order_at
+             FROM orders o
+             LEFT JOIN users u ON u.id = o.user_id
+             WHERE o.tenant_id = ?
+               AND COALESCE(u.email, o.customer_email) IS NOT NULL
+             GROUP BY COALESCE(u.id, 0), COALESCE(u.email, o.customer_email),
+                      COALESCE(u.name, o.customer_name, '(tanpa nama)'),
+                      COALESCE(u.phone, o.customer_phone)
+             ORDER BY last_order_at DESC
+             LIMIT 200",
+            [$tenantId]
+        );
+
+        return View::render('admin/customers', [
+            'title'     => 'Customer',
+            'customers' => $customers,
+        ]);
+    }
+
+    public function customerDetail(string $id): string
+    {
+        $tenantId = $_SESSION['tenant_id'] ?? 0;
+        $id = urldecode($id);
+
+        if (str_starts_with($id, 'email:')) {
+            $email = substr($id, 6);
+            $customer = Database::fetch(
+                "SELECT
+                    NULL AS id,
+                    COALESCE(MAX(o.customer_name), '(tanpa nama)') AS name,
+                    o.customer_email AS email,
+                    MAX(o.customer_phone) AS phone,
+                    COUNT(o.id) AS order_count,
+                    COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total_amount_cents ELSE 0 END), 0) AS total_spent_cents
+                 FROM orders o
+                 WHERE o.tenant_id = ? AND o.customer_email = ?
+                 GROUP BY o.customer_email",
+                [$tenantId, $email]
+            );
+            $orders = Database::fetchAll(
+                "SELECT o.*, e.title AS event_title
+                 FROM orders o
+                 LEFT JOIN events e ON e.id = o.event_id
+                 WHERE o.tenant_id = ? AND o.customer_email = ?
+                 ORDER BY o.created_at DESC",
+                [$tenantId, $email]
+            );
+        } else {
+            $customer = Database::fetch(
+                "SELECT u.id, u.name, u.email,
+                        COALESCE(u.phone, MAX(o.customer_phone)) AS phone,
+                        COUNT(o.id) AS order_count,
+                        COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total_amount_cents ELSE 0 END), 0) AS total_spent_cents
+                 FROM users u
+                 LEFT JOIN orders o ON o.user_id = u.id AND o.tenant_id = ?
+                 WHERE u.id = ?
+                 GROUP BY u.id",
+                [$tenantId, (int)$id]
+            );
+            $orders = Database::fetchAll(
+                "SELECT o.*, e.title AS event_title
+                 FROM orders o
+                 LEFT JOIN events e ON e.id = o.event_id
+                 WHERE o.tenant_id = ? AND o.user_id = ?
+                 ORDER BY o.created_at DESC",
+                [$tenantId, (int)$id]
+            );
+        }
+
+        if (!$customer) {
+            http_response_code(404);
+            return Router::renderError(404, 'Customer tidak ditemukan');
+        }
+
+        return View::render('admin/customer-detail', [
+            'title'    => $customer['name'] ?? 'Customer',
+            'customer' => $customer,
+            'orders'   => $orders,
+        ]);
+    }
+
     public function reports(): string
     {
         $tenantId = $_SESSION['tenant_id'] ?? 0;

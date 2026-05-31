@@ -1,109 +1,136 @@
 <?php ob_start(); ?>
-<div class="mx-auto max-w-2xl px-4 py-6" x-data="checkout()" x-init="init()">
-    <a href="<?= base_url('/' . $tenant['slug'] . '/events/' . $event['id']) ?>" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">&larr; Kembali ke event</a>
+<div class="container-lg py-4" style="max-width:42rem" x-data="checkout()" x-init="init()">
+    <a href="<?= base_url('/' . $tenant['slug'] . '/events/' . $event['id']) ?>"
+       class="text-medium-emphasis text-decoration-none small mb-4 d-inline-flex align-items-center gap-1">
+        <i class="cil-arrow-left"></i> Kembali ke event
+    </a>
 
-    <h1 class="text-xl font-bold sm:text-2xl mb-6">Checkout</h1>
+    <h1 class="h3 fw-bold mb-4">Checkout</h1>
 
-    <!-- Empty cart -->
     <template x-if="seats.length === 0">
-        <div class="card p-6 text-center">
-            <p class="text-sm text-gray-500">Keranjang kosong. Silakan pilih kursi terlebih dahulu.</p>
-            <a href="<?= base_url('/' . $tenant['slug'] . '/events/' . $event['id']) ?>" class="btn btn-primary btn-md mt-4 inline-flex">Pilih Kursi</a>
+        <div class="card">
+            <div class="card-body text-center p-4">
+                <p class="text-medium-emphasis small mb-3">Keranjang kosong. Silakan pilih kursi terlebih dahulu.</p>
+                <a href="<?= base_url('/' . $tenant['slug'] . '/events/' . $event['id']) ?>" class="btn btn-primary">Pilih Kursi</a>
+            </div>
         </div>
     </template>
 
     <template x-if="seats.length > 0">
-    <div>
-    <!-- Steps -->
-    <div class="mb-8 flex items-center justify-center gap-2 text-sm">
-        <template x-for="(s,i) in ['Detail','Bayar','Selesai']" :key="i">
-            <div class="flex items-center gap-2">
-                <div class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium"
-                     :class="step >= i ? 'bg-brand-500 text-white' : 'bg-gray-200 text-gray-500'"
-                     x-text="step > i ? '✓' : i+1"></div>
-                <span :class="step >= i ? 'text-gray-900' : 'text-gray-400'" x-text="s"></span>
-                <template x-if="i < 2"><div class="h-px w-8 bg-gray-200"></div></template>
+        <div>
+            <div class="d-flex justify-content-center gap-2 small mb-4 flex-wrap">
+                <template x-for="(s,i) in ['Detail','Bayar','Selesai']" :key="i">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle fw-medium"
+                              style="width:28px;height:28px;font-size:12px"
+                              :class="step >= i ? 'bg-primary text-white' : 'bg-body-secondary text-medium-emphasis'"
+                              x-text="step > i ? '✓' : i+1"></span>
+                        <span :class="step >= i ? 'fw-medium' : 'text-medium-emphasis'" x-text="s"></span>
+                        <template x-if="i < 2">
+                            <span class="bg-body-secondary" style="height:1px;width:24px;display:inline-block"></span>
+                        </template>
+                    </div>
+                </template>
             </div>
-        </template>
-    </div>
 
-    <!-- Order Summary -->
-    <div class="card p-4 sm:p-5 mb-6">
-        <h2 class="font-semibold"><span x-text="eventTitle"></span></h2>
-        <p class="text-xs text-gray-500 mt-1"><span x-text="eventDate"></span> · <span x-text="venueName"></span></p>
-        <div class="mt-3 space-y-2 text-sm">
-            <template x-for="s in seats" :key="s.label">
-                <div class="flex justify-between">
-                    <span x-text="'Kursi ' + s.label + (s.category ? ' (' + s.category + ')' : '')"></span>
-                    <span x-text="formatRupiah(s.price)"></span>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6 fw-semibold mb-1" x-text="eventTitle"></h2>
+                    <p class="small text-medium-emphasis mb-3">
+                        <span x-text="eventDate"></span> · <span x-text="venueName"></span>
+                    </p>
+                    <div class="d-flex flex-column gap-1 small">
+                        <template x-for="s in seats" :key="s.label">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-medium-emphasis" x-text="'Kursi ' + s.label + (s.category ? ' (' + s.category + ')' : '')"></span>
+                                <span x-text="formatRupiah(s.price)"></span>
+                            </div>
+                        </template>
+                        <template x-if="discount > 0">
+                            <div class="d-flex justify-content-between text-success">
+                                <span x-text="'Diskon' + (appliedCode ? ' (' + appliedCode + ')' : '')"></span>
+                                <span x-text="'-' + formatRupiah(discount)"></span>
+                            </div>
+                        </template>
+                        <div class="border-top pt-2 mt-1 d-flex justify-content-between fw-semibold">
+                            <span>Total</span>
+                            <span class="text-primary" x-text="formatRupiah(grandTotal)"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3" x-show="step < 2">
+                        <input type="text" placeholder="Kode promo" x-model="promoCode" class="form-control text-uppercase" @keyup.enter="applyPromo()">
+                        <button class="btn btn-outline-primary" @click="applyPromo()" :disabled="promoLoading">Pakai</button>
+                    </div>
+                    <p x-show="promoMsg" x-text="promoMsg" class="small mt-2 mb-0"
+                       :class="discount > 0 ? 'text-success' : 'text-danger'"></p>
                 </div>
-            </template>
-            <template x-if="discount > 0">
-                <div class="flex justify-between text-emerald-600">
-                    <span x-text="'Diskon' + (appliedCode ? ' (' + appliedCode + ')' : '')"></span>
-                    <span x-text="'-' + formatRupiah(discount)"></span>
+            </div>
+
+            <div x-show="step === 0" class="card">
+                <div class="card-body">
+                    <h2 class="h6 fw-semibold mb-3">Data Pemesan</h2>
+                    <div class="mb-3">
+                        <label class="form-label">Nama Lengkap</label>
+                        <input type="text" x-model="name" class="form-control" placeholder="Masukkan nama">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" x-model="email" class="form-control" placeholder="contoh@email.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nomor HP (opsional)</label>
+                        <input type="tel" x-model="phone" class="form-control" placeholder="+6281234567890">
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="goToPayment()" :disabled="!name || !email">
+                        Lanjut ke Pembayaran
+                    </button>
                 </div>
-            </template>
-            <div class="border-t pt-2 flex justify-between font-semibold text-base">
-                <span>Total</span><span class="text-brand-600" x-text="formatRupiah(grandTotal)"></span>
+            </div>
+
+            <div x-show="step === 1" class="card">
+                <div class="card-body">
+                    <h2 class="h6 fw-semibold mb-3">Metode Pembayaran</h2>
+                    <div class="d-flex flex-column gap-2 mb-3">
+                        <?php foreach ([['va','Virtual Account','Transfer via ATM/m-banking','cil-bank'],['ewallet','E-Wallet (QRIS)','GoPay, OVO, Dana, ShopeePay','cil-mobile'],['card','Kartu Debit/Kredit','Visa, Mastercard, JCB','cil-credit-card']] as [$id,$pname,$desc,$icon]): ?>
+                            <label class="d-flex align-items-start gap-3 rounded-3 border p-3"
+                                   style="cursor:pointer"
+                                   :class="paymentMethod === '<?= $id ?>' ? 'border-primary bg-primary bg-opacity-10' : ''">
+                                <input type="radio" name="pm" value="<?= $id ?>" x-model="paymentMethod" class="form-check-input mt-1">
+                                <i class="<?= $icon ?> fs-4 text-primary"></i>
+                                <div>
+                                    <div class="fw-medium"><?= $pname ?></div>
+                                    <div class="small text-medium-emphasis"><?= $desc ?></div>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="processPayment()" :disabled="loading"
+                            x-text="loading ? 'Memproses...' : ('Bayar ' + formatRupiah(grandTotal))"></button>
+                </div>
+            </div>
+
+            <div x-show="step === 2" class="card">
+                <div class="card-body text-center">
+                    <div class="spinner-border text-primary mb-3" role="status"><span class="visually-hidden">Loading...</span></div>
+                    <h2 class="h6 fw-semibold mb-1">Menunggu Pembayaran</h2>
+                    <p class="small text-medium-emphasis mb-3">
+                        Order: <span class="font-monospace fw-semibold" x-text="orderCode"></span>
+                    </p>
+
+                    <div x-show="paymentMethod === 'va'" class="rounded-3 border bg-body-tertiary p-3 mb-3">
+                        <div class="small text-medium-emphasis mb-1">Nomor Virtual Account (BCA)</div>
+                        <div class="fs-3 font-monospace fw-bold" x-text="vaNumber"></div>
+                        <div class="small text-medium-emphasis mt-2">
+                            Total: <span class="fw-bold" x-text="formatRupiah(grandTotal)"></span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-primary w-100" @click="simulatePayment()" :disabled="loading"
+                            x-text="loading ? 'Memproses...' : '(Dev) Simulasi Pembayaran Sukses'"></button>
+                </div>
             </div>
         </div>
-
-        <!-- Promo -->
-        <div class="mt-4 flex gap-2" x-show="step < 2">
-            <input type="text" placeholder="Kode promo" x-model="promoCode" class="input flex-1 uppercase" @keyup.enter="applyPromo()">
-            <button class="btn btn-outline" @click="applyPromo()" :disabled="promoLoading">Pakai</button>
-        </div>
-        <p x-show="promoMsg" x-text="promoMsg" class="mt-1 text-xs" :class="discount > 0 ? 'text-green-600' : 'text-red-600'"></p>
-    </div>
-
-    <!-- Step 1: Details -->
-    <div x-show="step === 0" class="card p-4 sm:p-5">
-        <h2 class="font-semibold mb-4">Data Pemesan</h2>
-        <div class="space-y-4">
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
-                <input type="text" x-model="name" class="input" placeholder="Masukkan nama"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" x-model="email" class="input" placeholder="contoh@email.com"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Nomor HP (opsional)</label>
-                <input type="tel" x-model="phone" class="input" placeholder="+6281234567890"></div>
-            <button class="btn btn-primary btn-lg w-full" @click="goToPayment()" :disabled="!name || !email">
-                Lanjut ke Pembayaran
-            </button>
-        </div>
-    </div>
-
-    <!-- Step 2: Payment -->
-    <div x-show="step === 1" class="card p-4 sm:p-5">
-        <h2 class="font-semibold mb-4">Metode Pembayaran</h2>
-        <div class="space-y-3">
-            <?php foreach ([['va','Virtual Account','Transfer via ATM/m-banking'],['ewallet','E-Wallet (QRIS)','GoPay, OVO, Dana, ShopeePay'],['card','Kartu Debit/Kredit','Visa, Mastercard, JCB']] as [$id,$pname,$desc]): ?>
-                <label class="flex cursor-pointer items-start gap-3 rounded-lg border p-3" :class="paymentMethod === '<?=$id?>' ? 'border-brand-500 bg-brand-50' : 'border-gray-200'">
-                    <input type="radio" name="pm" value="<?=$id?>" x-model="paymentMethod" class="mt-0.5">
-                    <div><span class="font-medium"><?=$pname?></span><p class="text-xs text-gray-500"><?=$desc?></p></div>
-                </label>
-            <?php endforeach; ?>
-            <button class="btn btn-primary btn-lg w-full" @click="processPayment()" :disabled="loading" x-text="loading ? 'Memproses...' : ('Bayar ' + formatRupiah(grandTotal))"></button>
-        </div>
-    </div>
-
-    <!-- Step 3: Pending -->
-    <div x-show="step === 2" class="card p-4 sm:p-5 text-center">
-        <div class="animate-spin mx-auto mb-4 h-8 w-8 rounded-full border-2 border-gray-300 border-t-brand-500"></div>
-        <h2 class="font-semibold">Menunggu Pembayaran</h2>
-        <p class="mt-1 text-xs text-gray-500">Order: <span class="font-mono font-semibold" x-text="orderCode"></span></p>
-
-        <div x-show="paymentMethod === 'va'" class="mt-4 rounded-lg bg-gray-50 border p-4">
-            <p class="text-xs text-gray-500 mb-1">Nomor Virtual Account (BCA)</p>
-            <div class="flex items-center justify-center gap-2">
-                <span class="text-2xl font-mono font-bold tracking-wider" x-text="vaNumber"></span>
-            </div>
-            <p class="mt-2 text-xs text-gray-500">Total: <span class="font-bold" x-text="formatRupiah(grandTotal)"></span></p>
-        </div>
-
-        <button class="btn btn-secondary w-full mt-6" @click="simulatePayment()" :disabled="loading" x-text="loading ? 'Memproses...' : '(Dev) Simulasi Pembayaran Sukses'"></button>
-    </div>
-    </div>
     </template>
 </div>
 
