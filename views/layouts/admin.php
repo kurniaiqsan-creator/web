@@ -21,6 +21,7 @@ $navGroups = [
         'items' => [
             ['/admin/dashboard', 'cil-speedometer', 'Dashboard'],
             ['/admin/events',    'cil-calendar',    'Event'],
+            ['/admin/venues',    'cil-room',        'Venue'],
             ['/admin/orders',    'cil-cart',        'Pesanan'],
             ['/admin/customers', 'cil-people',      'Customer'],
             ['/admin/scanner',   'cil-qr-code',     'Scanner Tiket'],
@@ -158,6 +159,10 @@ $isActive = function (string $href) use ($currentPath): bool {
 
     <div class="body flex-grow-1">
         <div class="container-lg px-4">
+            <?php $flash = Session::consumeFlash(); ?>
+            <?php if ($flash): ?>
+                <script>document.addEventListener('DOMContentLoaded', function(){ window.showToast && showToast(<?= json_encode($flash['message']) ?>, <?= json_encode($flash['type']) ?>); });</script>
+            <?php endif; ?>
             <?= $content ?? '' ?>
         </div>
     </div>

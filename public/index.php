@@ -103,15 +103,31 @@ $router->get('/t/{token}', function (string $token) {
 // ===== ADMIN ROUTES (harus sebelum /{tenantSlug}) =====
 $router->group('/admin', function (Router $r) {
     $r->get('/dashboard', [AdminController::class, 'dashboard']);
+
+    // Events
     $r->get('/events', [AdminController::class, 'events']);
     $r->get('/events/create', [AdminController::class, 'eventEditor']);
+    $r->post('/events', [AdminController::class, 'eventSave']);
     $r->get('/events/{id}', [AdminController::class, 'eventEditor']);
+    $r->post('/events/{id}', [AdminController::class, 'eventSave']);
+    $r->post('/events/{id}/delete', [AdminController::class, 'eventDelete']);
+
+    // Venues
+    $r->get('/venues', [AdminController::class, 'venues']);
+    $r->get('/venues/create', [AdminController::class, 'venueEditor']);
+    $r->post('/venues', [AdminController::class, 'venueSave']);
+    $r->get('/venues/{id}', [AdminController::class, 'venueEditor']);
+    $r->post('/venues/{id}', [AdminController::class, 'venueSave']);
+    $r->post('/venues/{id}/delete', [AdminController::class, 'venueDelete']);
+
+    // Lain
     $r->get('/orders', [AdminController::class, 'orders']);
     $r->get('/customers', [AdminController::class, 'customers']);
     $r->get('/customers/{id}', [AdminController::class, 'customerDetail']);
     $r->get('/reports', [AdminController::class, 'reports']);
     $r->get('/scanner', [AdminController::class, 'scanner']);
     $r->get('/settings', [AdminController::class, 'settings']);
+    $r->post('/settings', [AdminController::class, 'settingsSave']);
 }, [adminMiddleware(...), tenantMiddleware(...)]);
 
 // ===== API ROUTES (harus sebelum /{tenantSlug}) =====

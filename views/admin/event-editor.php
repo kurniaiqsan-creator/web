@@ -1,8 +1,11 @@
 <?php ob_start(); ?>
-<div x-data="eventEditor()">
+<form method="post" id="eventForm" action="<?= base_url($event ? '/admin/events/' . $event['id'] : '/admin/events') ?>" x-data="eventEditor()" @submit="prepareSubmit">
+    <input type="hidden" name="status" x-model="form.status">
+    <input type="hidden" name="layout" x-model="layoutJson">
+
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div class="d-flex align-items-center gap-3">
-            <a href="/admin/events" class="btn btn-outline-secondary btn-sm"><i class="cil-arrow-left me-1"></i></a>
+            <a href="<?= base_url('/admin/events') ?>" class="btn btn-outline-secondary btn-sm"><i class="cil-arrow-left me-1"></i></a>
             <div>
                 <h1 class="fs-3 fw-bold mb-1"><?= $event ? 'Edit Event' : 'Buat Event Baru' ?></h1>
                 <?php if ($event): ?>
@@ -11,8 +14,8 @@
             </div>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary" @click="saveDraft()"><i class="cil-save me-1"></i>Simpan Draft</button>
-            <button class="btn btn-primary" @click="publish()"><i class="cil-send me-1"></i>Publish</button>
+            <button class="btn btn-outline-secondary" type="button" @click="submitWith('draft')"><i class="cil-save me-1"></i>Simpan Draft</button>
+            <button class="btn btn-primary" type="button" @click="submitWith('published')"><i class="cil-send me-1"></i>Publish</button>
         </div>
     </div>
 
@@ -37,34 +40,39 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-12">
-                            <label class="form-label">Nama Event</label>
-                            <input class="form-control" x-model="form.title" placeholder="Konser Akustik Malam Minggu">
+                            <label class="form-label">Nama Event <span class="text-danger">*</span></label>
+                            <input class="form-control" name="title" x-model="form.title" placeholder="Konser Akustik Malam Minggu" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Venue</label>
-                            <select class="form-select" x-model="form.venue_id">
+                            <label class="form-label">Venue <span class="text-danger">*</span></label>
+                            <select class="form-select" name="venue_id" x-model="form.venue_id" required>
                                 <option value="">Pilih venue</option>
                                 <?php foreach ($venues as $v): ?><option value="<?= $v['id'] ?>"><?= View::e($v['name']) ?></option><?php endforeach; ?>
                             </select>
+                            <?php if (empty($venues)): ?><div class="form-text text-warning">Belum ada venue. <a href="<?= base_url('/admin/venues/create') ?>">Buat venue dulu</a>.</div><?php endif; ?>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Tipe</label>
-                            <select class="form-select" x-model="form.type">
+                            <select class="form-select" name="type" x-model="form.type">
                                 <option value="seat_map">Seat Map (Denah Kursi)</option>
                                 <option value="general_admission">General Admission</option>
                             </select>
                         </div>
+                        <div class="col-md-6" x-show="form.type === 'general_admission'">
+                            <label class="form-label">Kapasitas</label>
+                            <input type="number" min="0" class="form-control" name="capacity" x-model="form.capacity">
+                        </div>
                         <div class="col-12">
                             <label class="form-label">Deskripsi</label>
-                            <textarea class="form-control" x-model="form.description" rows="3" placeholder="Deskripsi event..."></textarea>
+                            <textarea class="form-control" name="description" x-model="form.description" rows="3" placeholder="Deskripsi event..."></textarea>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Tanggal & Jam Mulai</label>
-                            <input type="datetime-local" class="form-control" x-model="form.start_time">
+                            <label class="form-label">Tanggal & Jam Mulai <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" name="start_time" x-model="form.start_time" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Tanggal & Jam Selesai</label>
-                            <input type="datetime-local" class="form-control" x-model="form.end_time">
+                            <input type="datetime-local" class="form-control" name="end_time" x-model="form.end_time">
                         </div>
                     </div>
                 </div>
@@ -184,41 +192,73 @@
             </div>
         </div>
     </div>
-</div>
+</form>
 
 <script>
+window.__EVENT_SEATS__ = <?= json_encode(array_map(function($s){
+    $meta = json_decode($s['metadata'] ?? '{}', true) ?: [];
+    return [
+        'label'       => $s['seat_label'],
+        'row'         => $s['row_label'],
+        'col'         => (int)$s['col_number'],
+        'category_id' => (int)($s['category_id'] ?? 0),
+        'status'      => $s['status'] ?: 'available',
+        'x'           => $meta['x'] ?? null,
+        'y'           => $meta['y'] ?? null,
+    ];
+}, $seats), JSON_UNESCAPED_UNICODE) ?>;
+
 function eventEditor() {
     return {
         tab: 'info',
         form: {
-            title: '<?= $event ? View::e($event['title']) : '' ?>',
-            description: '<?= $event ? View::e($event['description'] ?? '') : '' ?>',
-            venue_id: '<?= $event['venue_id'] ?? '' ?>',
-            type: '<?= $event ? ($event['settings']['type'] ?? 'seat_map') : 'seat_map' ?>',
-            start_time: '<?= $event ? str_replace(' ', 'T', substr($event['start_time']??'', 0, 16)) : '' ?>',
-            end_time: '<?= $event ? str_replace(' ', 'T', substr($event['end_time']??'', 0, 16)) : '' ?>',
+            title: <?= json_encode($event['title'] ?? '') ?>,
+            description: <?= json_encode($event['description'] ?? '') ?>,
+            venue_id: <?= json_encode((string)($event['venue_id'] ?? '')) ?>,
+            type: <?= json_encode($event ? ($event['settings']['type'] ?? 'seat_map') : 'seat_map') ?>,
+            capacity: <?= json_encode((int)($event['settings']['capacity'] ?? 0)) ?>,
+            start_time: <?= json_encode($event ? str_replace(' ', 'T', substr($event['start_time'] ?? '', 0, 16)) : '') ?>,
+            end_time: <?= json_encode($event ? str_replace(' ', 'T', substr($event['end_time'] ?? '', 0, 16)) : '') ?>,
+            status: <?= json_encode($event['status'] ?? 'draft') ?>,
         },
         layoutSeats: [], selectedSeats: [], bulkCategory: '', canvasWidth: 340, canvasHeight: 220,
+        layoutJson: '[]',
 
         init() {
-            const seats = [];
-            const rows = ['A','B','C','D','E','F'];
             const seatW = 24, gap = 3;
-            rows.forEach((row, ri) => {
-                for (let col = 1; col <= 10; col++) {
-                    seats.push({
-                        label: row+'-'+col, row, col,
-                        x: (col-1)*(seatW+gap)+gap+25,
-                        y: ri*(seatW+gap)+gap+10,
-                        category_id: col <= 3 ? 1 : 2,
-                        status: col===2 ? 'sold' : (col===5 ? 'blocked' : 'available'),
-                        selected: false
-                    });
-                }
-            });
-            this.layoutSeats = seats;
-            this.canvasWidth = 10*(seatW+gap)+gap+50;
-            this.canvasHeight = 6*(seatW+gap)+gap+20;
+            const existing = window.__EVENT_SEATS__ || [];
+            if (existing.length > 0) {
+                // Edit mode: pakai layout existing.
+                this.layoutSeats = existing.map(s => ({
+                    label: s.label, row: s.row, col: s.col,
+                    x: s.x ?? ((s.col-1)*(seatW+gap)+gap+25),
+                    y: s.y ?? (('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.indexOf(s.row))*(seatW+gap)+gap+10),
+                    category_id: s.category_id || 0,
+                    status: s.status || 'available',
+                    selected: false
+                }));
+            } else {
+                // Create mode: default grid 6x10.
+                const seats = [];
+                const rows = ['A','B','C','D','E','F'];
+                rows.forEach((row, ri) => {
+                    for (let col = 1; col <= 10; col++) {
+                        seats.push({
+                            label: row+'-'+col, row, col,
+                            x: (col-1)*(seatW+gap)+gap+25,
+                            y: ri*(seatW+gap)+gap+10,
+                            category_id: 0,
+                            status: 'available',
+                            selected: false
+                        });
+                    }
+                });
+                this.layoutSeats = seats;
+            }
+            const maxCol = this.layoutSeats.reduce((m,s)=>Math.max(m,s.col),0);
+            const rowCount = new Set(this.layoutSeats.map(s=>s.row)).size;
+            this.canvasWidth  = maxCol  *(seatW+gap)+gap+50;
+            this.canvasHeight = rowCount*(seatW+gap)+gap+20;
         },
         toggleSeat(label) {
             const s = this.layoutSeats.find(s => s.label === label);
@@ -258,8 +298,33 @@ function eventEditor() {
             this.selectedSeats = []; this.layoutSeats.forEach(s => s.selected = false);
             showToast('Status diubah');
         },
-        saveDraft() { showToast('Event disimpan sebagai draft'); },
-        publish() { showToast('Event dipublikasikan'); }
+        submitWith(status) {
+            if (!this.form.title) { showToast('Nama event wajib diisi', 'error'); return; }
+            if (!this.form.venue_id) { showToast('Venue wajib dipilih', 'error'); return; }
+            if (!this.form.start_time) { showToast('Tanggal mulai wajib diisi', 'error'); return; }
+            this.form.status = status;
+            // Serialize seats untuk dikirim sebagai 1 field JSON.
+            this.layoutJson = JSON.stringify(
+                this.layoutSeats.map(s => ({
+                    label: s.label, row: s.row, col: s.col,
+                    category_id: s.category_id, status: s.status,
+                    x: s.x, y: s.y,
+                }))
+            );
+            // Tunggu Alpine flush model ke hidden input, baru submit.
+            this.$nextTick(() => document.getElementById('eventForm').submit());
+        },
+
+        prepareSubmit() {
+            // Fallback kalau user tekan Enter di field; tetap serialize layout.
+            this.layoutJson = JSON.stringify(
+                this.layoutSeats.map(s => ({
+                    label: s.label, row: s.row, col: s.col,
+                    category_id: s.category_id, status: s.status,
+                    x: s.x, y: s.y,
+                }))
+            );
+        }
     }
 }
 </script>
