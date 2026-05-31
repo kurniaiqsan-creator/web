@@ -803,6 +803,16 @@ class ApiController
         } catch (Exception $e) {
             Database::rollback();
             error_log('Failed to finalize order: ' . $e->getMessage());
+            return;
+        }
+
+        // Kirim notifikasi e-ticket (email + WA) di luar transaksi DB supaya
+        // panggilan SMTP/HTTP yang lambat tidak menahan lock. Kegagalan kirim
+        // tidak membatalkan order (sudah lunas) — tercatat di notifications_outbox.
+        try {
+            Notifier::sendOrderPaid($orderId);
+        } catch (Throwable $e) {
+            error_log('Notifier error for order ' . $orderId . ': ' . $e->getMessage());
         }
     }
 }
