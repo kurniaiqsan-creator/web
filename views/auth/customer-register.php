@@ -44,7 +44,7 @@
 
                 <p class="text-center small text-medium-emphasis mt-3 mb-0">
                     Sudah punya akun?
-                    <a href="<?= base_url('/masuk' . (!empty($next) ? '?next=' . urlencode($next) : '')) ?>">Masuk di sini</a>
+                    <a href="<?= base_url('/login' . (!empty($next) ? '?next=' . urlencode($next) : '')) ?>">Masuk di sini</a>
                 </p>
             </div>
         </div>

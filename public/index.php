@@ -190,8 +190,11 @@ $router->group('/api/v1', function (Router $r) {
 $router->post('/webhooks/payment', [ApiController::class, 'paymentWebhook']);
 
 // ===== CUSTOMER ACCOUNT (single-tenant, tanpa slug) =====
-$router->get('/masuk', [CustomerController::class, 'loginForm']);
-$router->post('/masuk', [CustomerController::class, 'login']);
+// Login terpadu: /masuk lama diarahkan ke /login (satu pintu admin + customer).
+$router->get('/masuk', function () {
+    $next = isset($_GET['next']) ? '?next=' . rawurlencode((string)$_GET['next']) : '';
+    Router::redirect('/login' . $next);
+});
 $router->get('/daftar', [CustomerController::class, 'registerForm']);
 $router->post('/daftar', [CustomerController::class, 'register']);
 $router->get('/lupa-password', [CustomerController::class, 'forgotForm']);
@@ -203,6 +206,10 @@ $router->get('/akun', [CustomerController::class, 'account']);
 $router->post('/akun/profil', [CustomerController::class, 'profileUpdate']);
 
 // ===== PUBLIC EVENT ROUTES (single-tenant, tanpa slug) =====
+$router->get('/events', function () {
+    return (new PublicController())->events();
+});
+
 $router->get('/events/{eventSlug}', function (string $eventSlug) {
     return (new PublicController())->eventDetail($eventSlug);
 });

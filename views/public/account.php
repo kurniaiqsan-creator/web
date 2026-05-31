@@ -19,7 +19,7 @@ $statusMap = [
             </p>
         </div>
         <div class="d-flex gap-2">
-            <a href="<?= base_url('/') ?>" class="btn btn-outline-primary btn-sm">
+            <a href="<?= base_url('/events') ?>" class="btn btn-outline-primary btn-sm">
                 <i class="cil-loop me-1"></i>Lihat Event
             </a>
             <a href="<?= base_url('/keluar') ?>" class="btn btn-outline-secondary btn-sm">
@@ -87,7 +87,7 @@ $statusMap = [
             <div class="card-body text-center p-5">
                 <i class="cil-bag fs-1 text-medium-emphasis mb-2 d-block"></i>
                 <p class="text-medium-emphasis mb-3">Belum ada pesanan. Yuk cari event menarik!</p>
-                <a href="<?= base_url('/') ?>" class="btn btn-primary">Jelajahi Event</a>
+                <a href="<?= base_url('/events') ?>" class="btn btn-primary">Jelajahi Event</a>
             </div>
         </div>
     <?php else: ?>

@@ -12,6 +12,15 @@ class PublicController
 
     public function home(): string
     {
+        // Landing page (hero + fitur). Tenant di-pass untuk header (logo, tombol Masuk/Daftar).
+        return View::render('public/home', [
+            'title'  => 'Visi — Platform Tiket',
+            'tenant' => $this->defaultTenant(),
+        ]);
+    }
+
+    public function events(): string
+    {
         $tenant = $this->defaultTenant();
         if (!$tenant) {
             http_response_code(404);

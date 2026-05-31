@@ -75,7 +75,7 @@
                             <i class="cil-user text-primary"></i>
                             <span>
                                 Sudah punya akun?
-                                <a href="<?= base_url('/masuk?next=' . urlencode('/events/' . $event['id'] . '/checkout')) ?>">Masuk</a>
+                                <a href="<?= base_url('/login?next=' . urlencode('/events/' . $event['id'] . '/checkout')) ?>">Masuk</a>
                                 supaya pesanan tersimpan di akunmu.
                             </span>
                         </div>

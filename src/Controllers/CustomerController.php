@@ -189,7 +189,7 @@ class CustomerController
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         if (empty($_SESSION['customer_id']) || (int)$_SESSION['customer_tenant_id'] !== (int)$tenant['id']) {
-            Router::redirect('/masuk?next=' . urlencode('/akun'));
+            Router::redirect('/login?next=' . urlencode('/akun'));
         }
 
         $customerId = (int)$_SESSION['customer_id'];
@@ -357,7 +357,7 @@ class CustomerController
         );
 
         Session::flash('Password berhasil diubah. Silakan masuk dengan password baru.');
-        Router::redirect('/masuk');
+        Router::redirect('/login');
     }
 
     /**
@@ -426,7 +426,7 @@ class CustomerController
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         if (empty($_SESSION['customer_id']) || (int)$_SESSION['customer_tenant_id'] !== (int)$tenant['id']) {
-            Router::redirect('/masuk?next=' . urlencode('/akun'));
+            Router::redirect('/login?next=' . urlencode('/akun'));
         }
 
         $customerId = (int)$_SESSION['customer_id'];

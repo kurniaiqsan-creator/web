@@ -15,6 +15,7 @@
                 <?php endif; ?>
 
                 <form method="POST" action="<?= base_url('/login') ?>">
+                    <input type="hidden" name="next" value="<?= View::e($next ?? '') ?>">
                     <div class="mb-3">
                         <label class="form-label">Email</label>
                         <input type="email" name="email" class="form-control" placeholder="contoh@email.com" required autofocus>

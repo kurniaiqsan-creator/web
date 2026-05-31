@@ -50,7 +50,7 @@
                     </a>
                     <a href="<?= base_url('/keluar') ?>" class="btn btn-link text-body-secondary btn-sm">Keluar</a>
                 <?php elseif (!empty($tenant)): ?>
-                    <a href="<?= base_url('/masuk') ?>" class="btn btn-outline-primary btn-sm">Masuk</a>
+                    <a href="<?= base_url('/login') ?>" class="btn btn-outline-primary btn-sm">Masuk</a>
                     <a href="<?= base_url('/daftar') ?>" class="btn btn-primary btn-sm">Daftar</a>
                 <?php else: ?>
                     <a href="<?= base_url('/login') ?>" class="btn btn-primary btn-sm">Masuk</a>

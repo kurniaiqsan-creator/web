@@ -1,6 +1,6 @@
 <?php ob_start(); ?>
 <div class="container-lg py-4" style="max-width:42rem">
-    <a href="<?= base_url('/') ?>"
+    <a href="<?= base_url('/events') ?>"
        class="text-medium-emphasis text-decoration-none small mb-4 d-inline-flex align-items-center gap-1">
         <i class="cil-arrow-left"></i> Kembali ke event
     </a>
@@ -10,7 +10,7 @@
             <div class="card-body text-center p-4">
                 <h1 class="h5 fw-bold mb-1">Order tidak ditemukan</h1>
                 <p class="small text-medium-emphasis">Order <span class="font-monospace"><?= View::e($orderCode) ?></span> tidak ditemukan.</p>
-                <a href="<?= base_url('/') ?>" class="btn btn-primary mt-2">Kembali</a>
+                <a href="<?= base_url('/events') ?>" class="btn btn-primary mt-2">Kembali</a>
             </div>
         </div>
     <?php else: ?>

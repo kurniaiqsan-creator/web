@@ -24,17 +24,20 @@ class AuthController
         return View::render('auth/login', [
             'title'  => 'Masuk',
             'tenant' => $this->defaultTenant(),
+            'next'   => $_GET['next'] ?? '',
         ]);
     }
 
     /**
      * Login terpadu: cari user by email (email unik global), lalu arahkan
-     * sesuai role — admin/staff ke panel admin, customer ke halaman akun.
+     * sesuai role — admin/staff ke panel admin, customer ke halaman akun
+     * (atau ke `next` bila aman, mis. balik ke checkout).
      */
     public function login(): string
     {
         $email = trim((string)($_POST['email'] ?? ''));
         $password = (string)($_POST['password'] ?? '');
+        $next = (string)($_POST['next'] ?? '');
 
         $user = Database::fetch("SELECT * FROM users WHERE email = ?", [$email]);
 
@@ -65,7 +68,7 @@ class AuthController
                     [(int)$user['id'], (int)$user['tenant_id'], $user['email']]
                 );
 
-                Router::redirect('/akun');
+                Router::redirect($this->safeNext($next));
             }
         }
 
@@ -73,7 +76,17 @@ class AuthController
             'title'  => 'Masuk',
             'tenant' => $this->defaultTenant(),
             'error'  => 'Email atau password salah',
+            'next'   => $next,
         ]);
+    }
+
+    /** Cegah open-redirect: hanya izinkan path internal relatif. */
+    private function safeNext(string $next): string
+    {
+        if ($next !== '' && str_starts_with($next, '/') && !str_starts_with($next, '//') && !str_contains($next, '://')) {
+            return $next;
+        }
+        return '/akun';
     }
 
     public function logout(): never

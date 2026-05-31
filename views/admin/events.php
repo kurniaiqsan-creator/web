@@ -32,7 +32,7 @@
                                 </td>
                                 <td class="text-end pe-4">
                                     <a href="/admin/events/<?= $e['id'] ?>" class="btn btn-sm btn-outline-primary me-1"><i class="cil-pencil me-1"></i>Edit</a>
-                                    <a href="/acoustic-nights/events/<?= $e['id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="cil-external-link me-1"></i>View</a>
+                                    <a href="<?= base_url('/events/' . $e['id']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="cil-external-link me-1"></i>View</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
