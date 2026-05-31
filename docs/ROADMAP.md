@@ -33,7 +33,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Migrasi tooling: `php migrate.php up` / `php migrate.php status`. Riwayat di tabel `schema_migrations`, baca `database/migrations/*.sql` urut natural. Migration 001 dibuat idempotent (cek `information_schema`).
 - [ ] **TODO** — Tooling lint/test (PHPStan/Psalm + PHPUnit). Sekarang nol.
 - [ ] **TODO** — CI (GitHub Actions): lint + test on PR. Sekarang nol.
-- [ ] **TODO** — Audit log viewer di admin (table `webhook_logs` ada; perlu page `/admin/logs`).
+- [x] **DONE** — Audit log viewer di admin (`/admin/logs`, 3 tab: Notifikasi/Webhook/Scan). Tab Notifikasi punya tombol "Kirim ulang" untuk notif gagal. Badge counter notif/webhook gagal.
 
 ### 2. UI / Theming
 
@@ -160,7 +160,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — WhatsApp via Fonnte (`src/Fonnte.php`, `FONNTE_TOKEN`). Kirim e-ticket + link saat order lunas. Token per-tenant di Settings atau `.env`. *Perlu isi token Fonnte untuk aktif.*
 - [ ] **TODO** — Push (FCM) — PRD optional.
 - [x] **DONE** — Tabel `notifications_outbox` (logging + status pending/sent/failed + last_error, idempotensi per channel). Migration 003.
-- [ ] **TODO** — Retry worker untuk notif `failed` (sekarang sekali kirim; baris `failed` tercatat untuk retry manual/cron nanti).
+- [~] **WIRED** — Retry notif `failed`: manual via tombol "Kirim ulang" di `/admin/logs` (`Notifier::retry`). Cron worker otomatis bisa ditambah nanti.
 
 ### 6. Sistem Promosi
 
@@ -182,7 +182,8 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 - [ ] **TODO** — Webhook signature verification per provider (Midtrans, Xendit, DOKU).
 - [ ] **TODO** — Rate limiting (per IP & per tenant) — PRD non-functional.
-- [ ] **TODO** — Audit log viewer (`/admin/logs`) — table `webhook_logs`, `ticket_scans` existing.
+- [x] **DONE** — Audit log viewer (`/admin/logs`) — tab Notifikasi (`notifications_outbox`), Webhook (`webhook_logs`), Scan Tiket (`ticket_scans`). + retry notif gagal.
+- [x] **DONE** — Retry worker untuk notif `failed` — manual via tombol "Kirim ulang" di `/admin/logs` (`Notifier::retry`). Cron otomatis masih bisa ditambah nanti.
 - [ ] **TODO** — Observability: structured logs, error tracking (Sentry?), uptime check.
 - [ ] **TODO** — Backup MySQL otomatis (ops).
 - [ ] **TODO** — Tests: unit (Models, Services), integration (HTTP), E2E (Playwright).
