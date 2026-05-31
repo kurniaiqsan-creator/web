@@ -6,6 +6,12 @@ class AdminController
     {
         $tenantId = $_SESSION['tenant_id'] ?? 0;
 
+        // Periode filter untuk chart (default 7 hari, opsi 30).
+        $days = (int)($_GET['days'] ?? 7);
+        if (!in_array($days, [7, 30], true)) {
+            $days = 7;
+        }
+
         $salesToday = Database::fetch(
             "SELECT COALESCE(SUM(total_amount_cents), 0) as total
              FROM orders WHERE tenant_id = ? AND status = 'paid' AND DATE(updated_at) = CURDATE()",
@@ -29,12 +35,43 @@ class AdminController
             [$tenantId]
         );
 
+        // Series penjualan harian (paid) untuk N hari terakhir, di-zero-fill agar
+        // tanggal tanpa transaksi tetap muncul.
+        $rows = Database::fetchAll(
+            "SELECT DATE(updated_at) AS d,
+                    COALESCE(SUM(total_amount_cents), 0) AS total,
+                    COUNT(*) AS cnt
+             FROM orders
+             WHERE tenant_id = ? AND status = 'paid'
+               AND updated_at >= (CURDATE() - INTERVAL ? DAY)
+             GROUP BY DATE(updated_at)",
+            [$tenantId, $days - 1]
+        );
+        $byDate = [];
+        foreach ($rows as $r) {
+            $byDate[(string)$r['d']] = ['total' => (int)$r['total'], 'cnt' => (int)$r['cnt']];
+        }
+
+        $chartLabels = [];
+        $chartTotals = [];
+        $chartCounts = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = date('Y-m-d', strtotime("-{$i} day"));
+            $chartLabels[] = date('d M', strtotime($date));
+            $chartTotals[] = $byDate[$date]['total'] ?? 0;
+            $chartCounts[] = $byDate[$date]['cnt'] ?? 0;
+        }
+
         return View::render('admin/dashboard', [
             'title'        => 'Dashboard',
             'salesToday'   => $salesToday['total'] ?? 0,
             'ordersPending'=> $ordersPending['cnt'] ?? 0,
             'ticketsSold'  => $ticketsSold['cnt'] ?? 0,
             'recentOrders' => $recentOrders,
+            'chartDays'    => $days,
+            'chartLabels'  => $chartLabels,
+            'chartTotals'  => $chartTotals,
+            'chartCounts'  => $chartCounts,
         ]);
     }
 

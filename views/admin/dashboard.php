@@ -72,6 +72,35 @@
         </div>
     </div>
 
+    <!-- Sales Chart -->
+    <div class="card mb-4">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="card-title mb-0">Penjualan</h5>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Periode">
+                <a href="<?= base_url('/admin/dashboard?days=7') ?>"
+                   class="btn btn-outline-primary <?= ($chartDays ?? 7) === 7 ? 'active' : '' ?>">7 Hari</a>
+                <a href="<?= base_url('/admin/dashboard?days=30') ?>"
+                   class="btn btn-outline-primary <?= ($chartDays ?? 7) === 30 ? 'active' : '' ?>">30 Hari</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <?php $hasSales = array_sum($chartTotals ?? []) > 0; ?>
+            <?php if ($hasSales): ?>
+                <div style="position:relative;height:320px">
+                    <canvas id="salesChart"
+                            data-labels='<?= htmlspecialchars(json_encode($chartLabels ?? []), ENT_QUOTES) ?>'
+                            data-totals='<?= htmlspecialchars(json_encode($chartTotals ?? []), ENT_QUOTES) ?>'
+                            data-counts='<?= htmlspecialchars(json_encode($chartCounts ?? []), ENT_QUOTES) ?>'></canvas>
+                </div>
+            <?php else: ?>
+                <div class="text-center py-5 text-medium-emphasis">
+                    <i class="cil-chart-line fs-1 d-block mb-2"></i>
+                    Belum ada penjualan lunas dalam <?= (int)($chartDays ?? 7) ?> hari terakhir.
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
     <!-- Recent Orders -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -123,4 +152,86 @@
         </div>
     </div>
 </div>
-<?php $content = ob_get_clean(); require VIEW_PATH . '/layouts/admin.php'; ?>
+<?php $content = ob_get_clean(); ?>
+<?php ob_start(); ?>
+<?php if (($hasSales ?? false)): ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    var canvas = document.getElementById('salesChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    var labels = JSON.parse(canvas.dataset.labels || '[]');
+    var totals = JSON.parse(canvas.dataset.totals || '[]');
+    var counts = JSON.parse(canvas.dataset.counts || '[]');
+
+    var styles = getComputedStyle(document.documentElement);
+    var primary = (styles.getPropertyValue('--cui-primary') || '#f97316').trim();
+    var borderColor = (styles.getPropertyValue('--cui-border-color') || 'rgba(0,0,0,.1)').trim();
+    var bodyColor = (styles.getPropertyValue('--cui-body-color') || '#333').trim();
+
+    var rupiah = function (v) { return 'Rp' + Number(v).toLocaleString('id-ID'); };
+
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Penjualan',
+                data: totals,
+                borderColor: primary,
+                backgroundColor: primary + '33',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 3,
+                pointBackgroundColor: primary,
+                yAxisID: 'y'
+            }, {
+                label: 'Jumlah Order',
+                data: counts,
+                borderColor: bodyColor,
+                backgroundColor: 'transparent',
+                borderDash: [5, 4],
+                tension: 0.35,
+                pointRadius: 2,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: bodyColor } },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            if (ctx.dataset.yAxisID === 'y') {
+                                return ' ' + ctx.dataset.label + ': ' + rupiah(ctx.parsed.y);
+                            }
+                            return ' ' + ctx.dataset.label + ': ' + ctx.parsed.y;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { color: borderColor }, ticks: { color: bodyColor } },
+                y: {
+                    position: 'left',
+                    grid: { color: borderColor },
+                    ticks: { color: bodyColor, callback: function (v) { return rupiah(v); } }
+                },
+                y1: {
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: bodyColor, precision: 0 }
+                }
+            }
+        }
+    });
+})();
+</script>
+<?php endif; ?>
+<?php $scripts = ob_get_clean(); $content .= $scripts; ?>
+<?php require VIEW_PATH . '/layouts/admin.php'; ?>
