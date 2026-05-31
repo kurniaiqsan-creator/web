@@ -50,8 +50,8 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 #### 3.1 Dashboard
 
 - [x] **DONE** — Stat cards (penjualan hari ini, order pending, tiket terjual, total order) + tabel "Pesanan Terbaru" (`views/admin/dashboard.php`).
-- [ ] **TODO** — Chart penjualan 7/30 hari (PRD mention "basic reporting").
-- [ ] **TODO** — Filter periode di dashboard.
+- [x] **DONE** — Chart penjualan 7/30 hari (Chart.js, line chart dual-axis: total penjualan + jumlah order, zero-filled, theme-aware). Empty state kalau belum ada penjualan.
+- [x] **DONE** — Filter periode di dashboard (toggle 7/30 hari via `?days=`, fallback aman).
 
 #### 3.2 Event Management
 
@@ -72,15 +72,15 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Detail order page (`/admin/orders/{id}`) — items + tickets + refunds + customer + event + payment cards.
 - [x] **DONE** — Export CSV (`GET /admin/orders/export`) — UTF-8 BOM, stream langsung, kolom code/status/total/customer/event.
 - [x] **DONE** — Refund (stub PG): `POST /admin/orders/{id}/refund` insert ke `refunds`, set `orders.status='refunded'`, `tickets.status='refunded'`, lepas seat ke `available`. Saldo real di PG masih BLOCKED.
-- [ ] **TODO** — Filter status, tanggal, search.
+- [x] **DONE** — Filter status, tanggal, search (`/admin/orders?status=&from=&to=&q=`). Shared filter builder dipakai juga oleh export CSV (export ikut filter aktif).
 
 #### 3.5 Customer (BARU di PR #2)
 
 - [x] **DONE** — List customer agregat by `COALESCE(user_id, customer_email)` (`/admin/customers`).
 - [x] **DONE** — Detail customer + histori order (`/admin/customers/{id}` atau `/admin/customers/email:{email}`).
 - [x] **DONE** — Telepon pakai `COALESCE(u.phone, MAX(o.customer_phone))` (fix commit `05e09c5`).
-- [ ] **TODO** — Search di list (input ada, tapi tidak filter — belum di-wire ke backend / client-side).
-- [ ] **TODO** — Export CSV daftar customer.
+- [x] **DONE** — Search di list (server-side via `?q=`, match nama/email/telepon pakai HAVING di query agregat).
+- [x] **DONE** — Export CSV daftar customer (`/admin/customers/export`, hormati `?q=`, UTF-8 BOM).
 
 #### 3.6 Scanner Tiket (QR Validation)
 
