@@ -109,6 +109,25 @@ CREATE TABLE seats (
     FOREIGN KEY (category_id) REFERENCES ticket_categories(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+-- ===== EVENT INVENTORY (General Admission / tanpa kursi) =====
+-- Inventaris per-event untuk event GA. Anti-oversell via SELECT ... FOR UPDATE.
+--   tersedia = quota - sold - held
+CREATE TABLE event_inventory (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    event_id BIGINT NOT NULL,
+    category_id BIGINT NOT NULL,
+    label VARCHAR(128) NULL,
+    quota INT NOT NULL DEFAULT 0,
+    sold INT NOT NULL DEFAULT 0,
+    held INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_event_category (event_id, category_id),
+    INDEX idx_event (event_id),
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES ticket_categories(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- ===== SEAT HOLDS =====
 CREATE TABLE seat_holds (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

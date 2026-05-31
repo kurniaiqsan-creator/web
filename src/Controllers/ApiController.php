@@ -215,6 +215,39 @@ class ApiController
                 $subtotalCents += $price;
             }
 
+            // === Enforce kuota General Admission (event_inventory). ===
+            // Item tanpa seat_label = tiket GA; agregasi jumlah per kategori, lalu
+            // kunci baris inventaris (FOR UPDATE) dan cek tersedia = quota - sold - held.
+            $gaQty = [];
+            foreach ($resolvedItems as $it) {
+                if ($it['seat_label'] === null && $it['category_id'] !== null) {
+                    $cid = (int)$it['category_id'];
+                    $gaQty[$cid] = ($gaQty[$cid] ?? 0) + 1;
+                }
+            }
+            foreach ($gaQty as $cid => $qty) {
+                $inv = Database::fetch(
+                    'SELECT id, quota, sold, held FROM event_inventory
+                     WHERE event_id = ? AND category_id = ? FOR UPDATE',
+                    [$eventId, $cid]
+                );
+                if (!$inv) {
+                    Database::rollback();
+                    return $this->error('GA_NO_INVENTORY', 'Kuota tiket untuk kategori ini belum diatur', 422);
+                }
+                $available = (int)$inv['quota'] - (int)$inv['sold'] - (int)$inv['held'];
+                if ($available < $qty) {
+                    Database::rollback();
+                    return $this->json([
+                        'error' => [
+                            'code'    => 'GA_SOLD_OUT',
+                            'message' => 'Tiket tidak mencukupi',
+                            'details' => ['category_id' => $cid, 'available' => max(0, $available), 'requested' => $qty],
+                        ]
+                    ], 409);
+                }
+            }
+
             // Evaluasi promo server-side (abaikan discount_cents dari client).
             $discountCents = 0;
             $promoApplied = null;
@@ -261,6 +294,16 @@ class ApiController
                     "UPDATE seats SET status = 'blocked'
                      WHERE event_id = ? AND seat_label IN ({$ph}) AND status = 'available'",
                     array_merge([$eventId], $seatLabels)
+                );
+            }
+
+            // Tahan kuota GA: tambah held sebanyak qty per kategori (dilepas saat
+            // order dibayar → pindah ke sold, atau saat order pending basi dibatalkan).
+            foreach ($gaQty as $cid => $qty) {
+                Database::query(
+                    'UPDATE event_inventory SET held = held + ?
+                     WHERE event_id = ? AND category_id = ?',
+                    [$qty, $eventId, $cid]
                 );
             }
 
@@ -357,6 +400,26 @@ class ApiController
                AND o.status = 'pending'
                AND o.created_at < (NOW() - INTERVAL ? SECOND)",
             [$eventId, $ttl]
+        );
+
+        // Lepas held GA dari order pending basi: kurangi event_inventory.held sebanyak
+        // jumlah item GA (tanpa seat_label) pada order tsb. GREATEST jaga-jaga underflow.
+        Database::query(
+            "UPDATE event_inventory ei
+             JOIN (
+                 SELECT oi.category_id, COUNT(*) AS qty
+                 FROM order_items oi
+                 JOIN orders o ON o.id = oi.order_id
+                 WHERE oi.event_id = ?
+                   AND oi.seat_label IS NULL
+                   AND oi.category_id IS NOT NULL
+                   AND o.status = 'pending'
+                   AND o.created_at < (NOW() - INTERVAL ? SECOND)
+                 GROUP BY oi.category_id
+             ) rel ON rel.category_id = ei.category_id
+             SET ei.held = GREATEST(ei.held - rel.qty, 0)
+             WHERE ei.event_id = ?",
+            [$eventId, $ttl, $eventId]
         );
 
         // Batalkan order pending basi untuk event ini.
@@ -585,6 +648,15 @@ class ApiController
                     Database::update('seats', ['status' => 'sold'], 'event_id = ? AND seat_label = ?', [
                         $item['event_id'], $item['seat_label']
                     ]);
+                } elseif ($item['category_id']) {
+                    // GA: pindahkan 1 tiket dari held → sold. GREATEST mencegah held
+                    // jadi negatif kalau hold sudah terlanjur dilepas (mis. order basi).
+                    Database::query(
+                        'UPDATE event_inventory
+                         SET sold = sold + 1, held = GREATEST(held - 1, 0)
+                         WHERE event_id = ? AND category_id = ?',
+                        [$item['event_id'], $item['category_id']]
+                    );
                 }
             }
 

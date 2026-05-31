@@ -1,4 +1,157 @@
 <?php ob_start(); ?>
+<?php $isGa = (($event['settings']['type'] ?? 'seat_map') === 'general_admission'); ?>
+<?php if ($isGa): ?>
+<!-- ===== GENERAL ADMISSION (tanpa kursi) ===== -->
+<div class="container-lg py-4" x-data="gaPicker()" x-init="init()">
+    <div class="mb-4">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            <span class="badge text-bg-warning">General Admission</span>
+            <span class="badge text-bg-success">Published</span>
+        </div>
+        <h1 class="h3 fw-bold mb-2"><?= View::e($event['title']) ?></h1>
+        <div class="d-flex flex-wrap gap-3 small text-medium-emphasis">
+            <span><i class="cil-calendar me-1"></i><?= View::formatDate($event['start_time']) ?></span>
+            <span><i class="cil-location-pin me-1"></i><?= View::e($event['venue_name']) ?></span>
+        </div>
+        <?php if (!empty($event['description'])): ?>
+            <p class="mt-3 text-medium-emphasis" style="max-width:48rem"><?= View::e($event['description']) ?></p>
+        <?php endif; ?>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><h2 class="h6 fw-semibold mb-0">Pilih Tiket</h2></div>
+                <div class="card-body">
+                    <?php if (empty($gaTiers)): ?>
+                        <p class="text-medium-emphasis mb-0">Belum ada tiket yang dijual untuk event ini.</p>
+                    <?php else: ?>
+                        <div class="d-flex flex-column gap-3">
+                            <?php foreach ($gaTiers as $t): $cid = (int)$t['category_id']; $avail = (int)$t['available']; ?>
+                                <div class="d-flex justify-content-between align-items-center rounded-3 border p-3">
+                                    <div>
+                                        <div class="fw-semibold"><?= View::e($t['name']) ?></div>
+                                        <div class="text-primary fw-semibold small"><?= View::formatRupiah($t['price_cents']) ?></div>
+                                        <?php if ($avail <= 0): ?>
+                                            <div class="small text-danger mt-1"><i class="cil-x-circle me-1"></i>Habis</div>
+                                        <?php elseif ($avail <= 20): ?>
+                                            <div class="small text-warning mt-1">Tersisa <?= $avail ?> tiket</div>
+                                        <?php else: ?>
+                                            <div class="small text-medium-emphasis mt-1">Tersedia</div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" @click="dec(<?= $cid ?>)" :disabled="(qty[<?= $cid ?>]||0) <= 0">−</button>
+                                        <span class="fw-semibold" style="min-width:1.5rem;text-align:center" x-text="qty[<?= $cid ?>]||0"></span>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" @click="inc(<?= $cid ?>, <?= $avail ?>)" :disabled="(qty[<?= $cid ?>]||0) >= <?= $avail ?>">+</button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="h6 fw-semibold mb-3">Pesanan Kamu</h3>
+                    <template x-if="totalQty === 0">
+                        <p class="small text-medium-emphasis mb-0">Pilih jumlah tiket di sebelah kiri.</p>
+                    </template>
+                    <template x-if="totalQty > 0">
+                        <div>
+                            <template x-for="line in lines" :key="line.categoryId">
+                                <div class="d-flex justify-content-between align-items-center small mb-1">
+                                    <span class="text-medium-emphasis" x-text="line.qty + '× ' + line.category"></span>
+                                    <span class="fw-medium" x-text="formatRupiah(line.qty * line.price)"></span>
+                                </div>
+                            </template>
+                            <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center fw-semibold">
+                                <span>Total</span>
+                                <span class="text-primary" x-text="formatRupiah(totalPrice)"></span>
+                            </div>
+                            <div class="d-grid mt-3">
+                                <button class="btn btn-primary btn-lg" @click="goToCheckout()">Lanjut ke Checkout</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function gaPicker() {
+    return {
+        qty: {},
+        meta: <?= json_encode(array_reduce($gaTiers, function($acc, $t){
+            $acc[(int)$t['category_id']] = ['price' => (int)$t['price_cents'], 'category' => $t['name']];
+            return $acc;
+        }, []), JSON_UNESCAPED_UNICODE) ?: '{}' ?>,
+        tenantSlug: '<?= View::e($tenant['slug'] ?? '') ?>',
+        eventId: <?= (int)($event['id'] ?? 0) ?>,
+        eventTitle: '<?= View::e($event['title'] ?? '') ?>',
+        venueName: '<?= View::e($event['venue_name'] ?? '') ?>',
+        eventDate: '<?= View::e(View::formatDate($event['start_time'] ?? 'now')) ?>',
+
+        init() {},
+        inc(cid, avail) {
+            const cur = this.qty[cid] || 0;
+            if (cur >= avail) return showToast('Stok tiket tidak mencukupi', 'error');
+            this.qty[cid] = cur + 1;
+        },
+        dec(cid) {
+            const cur = this.qty[cid] || 0;
+            if (cur <= 0) return;
+            this.qty[cid] = cur - 1;
+        },
+        get lines() {
+            return Object.entries(this.qty)
+                .filter(([cid, q]) => q > 0)
+                .map(([cid, q]) => ({
+                    categoryId: parseInt(cid),
+                    qty: q,
+                    price: this.meta[cid]?.price || 0,
+                    category: this.meta[cid]?.category || '',
+                }));
+        },
+        get totalQty() { return this.lines.reduce((a, l) => a + l.qty, 0); },
+        get totalPrice() { return this.lines.reduce((a, l) => a + l.qty * l.price, 0); },
+        goToCheckout() {
+            if (this.totalQty === 0) return showToast('Pilih minimal 1 tiket', 'error');
+            // Ekspansi qty → daftar item (1 baris per tiket) agar kompatibel dengan
+            // format cart seat-map yang sudah dipakai checkout.
+            const seats = [];
+            this.lines.forEach(l => {
+                for (let i = 0; i < l.qty; i++) {
+                    seats.push({label: '', price: l.price, category: l.category, categoryId: l.categoryId});
+                }
+            });
+            const cart = {
+                tenantSlug: this.tenantSlug,
+                eventId: this.eventId,
+                eventTitle: this.eventTitle,
+                venueName: this.venueName,
+                eventDate: this.eventDate,
+                seatHoldId: null,
+                seats,
+                totalPrice: this.totalPrice,
+                ga: true,
+            };
+            sessionStorage.setItem('visi_cart', JSON.stringify(cart));
+            window.location.href = base_url('/' + this.tenantSlug + '/events/' + this.eventId + '/checkout');
+        },
+        formatRupiah(cents) {
+            return 'Rp' + new Intl.NumberFormat('id-ID').format(cents);
+        }
+    }
+}
+</script>
+<?php $content = ob_get_clean(); require VIEW_PATH . '/layouts/main.php'; return; ?>
+<?php endif; ?>
 <div class="container-lg py-4" x-data="seatMap()" x-init="init()">
 
     <div class="mb-4">

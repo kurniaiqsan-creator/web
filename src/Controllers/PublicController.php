@@ -46,12 +46,28 @@ class PublicController
         );
         $event['settings'] = json_decode($event['settings'] ?? '{}', true);
 
+        // General Admission: ambil inventaris per kategori + harga, hitung sisa.
+        $gaTiers = [];
+        if (($event['settings']['type'] ?? 'seat_map') === 'general_admission') {
+            $gaTiers = Database::fetchAll(
+                "SELECT ei.category_id, ei.quota, ei.sold, ei.held,
+                        c.name, c.price_cents,
+                        GREATEST(ei.quota - ei.sold - ei.held, 0) AS available
+                 FROM event_inventory ei
+                 JOIN ticket_categories c ON c.id = ei.category_id
+                 WHERE ei.event_id = ?
+                 ORDER BY c.price_cents",
+                [$event['id']]
+            );
+        }
+
         return View::render('public/event', [
             'title'   => $event['title'],
             'tenant'  => $tenant,
             'event'   => $event,
             'categories' => $categories,
             'seats'   => $seats,
+            'gaTiers' => $gaTiers,
         ]);
     }
 

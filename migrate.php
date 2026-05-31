@@ -132,8 +132,13 @@ function runUp(array $files): void
                 }
                 Database::getInstance()->exec($stmt);
             }
+            // Catatan: DDL (CREATE/ALTER/DROP) memicu implicit commit di MySQL,
+            // sehingga transaksi bisa sudah tertutup di sini. Insert riwayat lalu
+            // commit hanya jika transaksi masih aktif (hindari "no active transaction").
             Database::insert('schema_migrations', ['migration' => $name]);
-            Database::commit();
+            if (Database::getInstance()->inTransaction()) {
+                Database::commit();
+            }
             echo "OK\n";
         } catch (Throwable $e) {
             // DDL di MySQL auto-commit; rollback mungkin tidak penuh, tapi tetap dicoba.

@@ -83,14 +83,22 @@ $mask = fn(string $val): string => $val === '' ? '' : '••••••••�
                     <button class="btn btn-primary btn-sm" type="submit"><i class="cil-save me-1"></i>Simpan</button>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3"><label class="form-label">SendGrid API Key</label>
-                        <input type="password" class="form-control" name="sendgrid_api_key" value="<?= View::e($mask((string)($notif['sendgrid_api_key'] ?? ''))) ?>" placeholder="SG.xxxx"></div>
-                    <div class="mb-3"><label class="form-label">Twilio Account SID</label>
-                        <input type="password" class="form-control" name="twilio_account_sid" value="<?= View::e($mask((string)($notif['twilio_account_sid'] ?? ''))) ?>"></div>
-                    <div class="mb-3"><label class="form-label">Twilio Auth Token</label>
-                        <input type="password" class="form-control" name="twilio_auth_token" value="<?= View::e($mask((string)($notif['twilio_auth_token'] ?? ''))) ?>"></div>
-                    <div class="mb-3"><label class="form-label">Twilio From Number</label>
-                        <input class="form-control" name="twilio_from" value="<?= View::e((string)($notif['twilio_from'] ?? '')) ?>" placeholder="+1XXXXXXXXXX"></div>
+                    <div class="mb-3"><label class="form-label">SMTP Host</label>
+                        <input class="form-control" name="mail_host" value="<?= View::e((string)($notif['mail_host'] ?? 'smtp.gmail.com')) ?>" placeholder="smtp.gmail.com"></div>
+                    <div class="mb-3"><label class="form-label">SMTP Port</label>
+                        <input class="form-control" name="mail_port" value="<?= View::e((string)($notif['mail_port'] ?? '587')) ?>" placeholder="587"></div>
+                    <div class="mb-3"><label class="form-label">SMTP Username</label>
+                        <input class="form-control" name="mail_username" value="<?= View::e((string)($notif['mail_username'] ?? '')) ?>" placeholder="kamu@gmail.com"></div>
+                    <div class="mb-3"><label class="form-label">SMTP Password (App Password)</label>
+                        <input type="password" class="form-control" name="mail_password" value="<?= View::e($mask((string)($notif['mail_password'] ?? ''))) ?>" placeholder="App Password 16 digit">
+                        <div class="form-text">Gmail: aktifkan 2FA lalu buat <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a>.</div></div>
+                    <div class="mb-3"><label class="form-label">Email From</label>
+                        <input class="form-control" name="mail_from" type="email" value="<?= View::e((string)($notif['mail_from'] ?? '')) ?>" placeholder="kamu@gmail.com"></div>
+                    <div class="mb-3"><label class="form-label">From Name</label>
+                        <input class="form-control" name="mail_from_name" value="<?= View::e((string)($notif['mail_from_name'] ?? 'Visi Tickets')) ?>" placeholder="Visi Tickets"></div>
+                    <div class="mb-3"><label class="form-label">Fonnte Token (WhatsApp)</label>
+                        <input type="password" class="form-control" name="fonnte_token" value="<?= View::e($mask((string)($notif['fonnte_token'] ?? ''))) ?>" placeholder="Token device dari dashboard Fonnte">
+                        <div class="form-text">Token per device. Lihat di <a href="https://fonnte.com" target="_blank" rel="noopener">dashboard Fonnte</a>.</div></div>
                 </div>
             </form>
         </div>

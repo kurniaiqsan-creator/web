@@ -100,8 +100,13 @@ class AdminController
         if ($event) {
             $seats = Database::fetchAll('SELECT * FROM seats WHERE event_id = ? ORDER BY row_label, col_number', [$event['id']]);
             $event['settings'] = json_decode($event['settings'] ?? '{}', true);
+            $inventory = Database::fetchAll(
+                'SELECT category_id, label, quota, sold, held FROM event_inventory WHERE event_id = ?',
+                [$event['id']]
+            );
         } else {
             $seats = [];
+            $inventory = [];
         }
 
         return View::render('admin/event-editor', [
@@ -110,6 +115,7 @@ class AdminController
             'venues'     => $venues,
             'categories' => $categories,
             'seats'      => $seats,
+            'inventory'  => $inventory,
         ]);
     }
 
@@ -159,7 +165,6 @@ class AdminController
         if ($type === 'general_admission') {
             $settings['capacity'] = $capacity;
         }
-
         $startSql = $startTime !== '' ? str_replace('T', ' ', $startTime) . ':00' : null;
         $endSql   = $endTime !== ''   ? str_replace('T', ' ', $endTime)   . ':00' : null;
 
@@ -247,13 +252,74 @@ class AdminController
                 }
             }
 
+            // General Admission: simpan kuota per kategori ke event_inventory.
+            // Field 'ga_tiers' = JSON [{category_id, quota}, ...]. Upsert agar `sold`
+            // & `held` yang sudah berjalan tidak ke-reset. Kuota tidak boleh < terjual.
+            if ($type === 'general_admission') {
+                $tiersRaw = (string)($_POST['ga_tiers'] ?? '');
+                $tiers = $tiersRaw !== '' ? json_decode($tiersRaw, true) : [];
+                if (!is_array($tiers)) {
+                    $tiers = [];
+                }
+
+                $tenantCategoryIds = array_column(
+                    Database::fetchAll('SELECT id, name FROM ticket_categories WHERE tenant_id = ?', [$tenantId]),
+                    'name', 'id'
+                );
+
+                $keptCategoryIds = [];
+                foreach ($tiers as $tier) {
+                    if (!is_array($tier)) continue;
+                    $cid   = (int)($tier['category_id'] ?? 0);
+                    $quota = max(0, (int)($tier['quota'] ?? 0));
+                    if ($cid <= 0 || !isset($tenantCategoryIds[$cid])) continue;
+
+                    $existing = Database::fetch(
+                        'SELECT id, sold, held FROM event_inventory WHERE event_id = ? AND category_id = ?',
+                        [$eventId, $cid]
+                    );
+                    // Jangan biarkan kuota turun di bawah yang sudah terjual+ditahan.
+                    $floor = $existing ? ((int)$existing['sold'] + (int)$existing['held']) : 0;
+                    $quota = max($quota, $floor);
+
+                    if ($existing) {
+                        Database::update('event_inventory',
+                            ['quota' => $quota, 'label' => $tenantCategoryIds[$cid]],
+                            'id = ?', [(int)$existing['id']]
+                        );
+                    } else {
+                        Database::insert('event_inventory', [
+                            'event_id'    => $eventId,
+                            'category_id' => $cid,
+                            'label'       => $tenantCategoryIds[$cid],
+                            'quota'       => $quota,
+                            'sold'        => 0,
+                            'held'        => 0,
+                        ]);
+                    }
+                    $keptCategoryIds[] = $cid;
+                }
+
+                // Hapus tier yang tidak lagi dikirim, tapi hanya kalau belum ada
+                // penjualan/hold (lindungi data order yang sudah berjalan).
+                $invRows = Database::fetchAll(
+                    'SELECT id, category_id, sold, held FROM event_inventory WHERE event_id = ?',
+                    [$eventId]
+                );
+                foreach ($invRows as $row) {
+                    if (in_array((int)$row['category_id'], $keptCategoryIds, true)) continue;
+                    if ((int)$row['sold'] === 0 && (int)$row['held'] === 0) {
+                        Database::query('DELETE FROM event_inventory WHERE id = ?', [(int)$row['id']]);
+                    }
+                }
+            }
+
             Database::commit();
             Session::flash(
                 $id ? 'Event diperbarui' : 'Event dibuat',
                 'success'
             );
-            Router::redirect("/admin/events/{$eventId}");
-        } catch (Throwable $e) {
+            Router::redirect("/admin/events/{$eventId}");        } catch (Throwable $e) {
             Database::rollback();
             error_log('eventSave error: ' . $e->getMessage());
             Session::flash('Gagal menyimpan event: ' . $e->getMessage(), 'error');
@@ -768,14 +834,18 @@ class AdminController
 
             case 'notifications':
                 $settings['notifications'] = $settings['notifications'] ?? [];
-                foreach (['sendgrid_api_key', 'twilio_account_sid', 'twilio_auth_token'] as $secret) {
+                // Field rahasia: hanya update kalau diketik (skip dot-mask).
+                foreach (['mail_password', 'fonnte_token'] as $secret) {
                     $val = (string)($_POST[$secret] ?? '');
                     if ($val !== '' && !str_contains($val, '•')) {
                         $settings['notifications'][$secret] = $val;
                     }
                 }
-                $twilioFrom = trim((string)($_POST['twilio_from'] ?? ''));
-                if ($twilioFrom !== '') $settings['notifications']['twilio_from'] = $twilioFrom;
+                // Field biasa (bukan rahasia): simpan apa adanya.
+                foreach (['mail_host', 'mail_port', 'mail_username', 'mail_from', 'mail_from_name'] as $field) {
+                    $val = trim((string)($_POST[$field] ?? ''));
+                    if ($val !== '') $settings['notifications'][$field] = $val;
+                }
                 Database::update('tenants',
                     ['settings' => json_encode($settings, JSON_UNESCAPED_UNICODE)],
                     'id = ?', [$tenantId]
@@ -885,6 +955,18 @@ class AdminController
                  JOIN order_items oi ON oi.event_id = s.event_id AND oi.seat_label = s.seat_label
                  SET s.status = 'available'
                  WHERE oi.order_id = ? AND s.status = 'sold'",
+                [(int)$id]
+            );
+            // Kembalikan kuota GA: kurangi sold per kategori sebanyak item GA order ini.
+            Database::query(
+                "UPDATE event_inventory ei
+                 JOIN (
+                     SELECT event_id, category_id, COUNT(*) AS qty
+                     FROM order_items
+                     WHERE order_id = ? AND seat_label IS NULL AND category_id IS NOT NULL
+                     GROUP BY event_id, category_id
+                 ) r ON r.event_id = ei.event_id AND r.category_id = ei.category_id
+                 SET ei.sold = GREATEST(ei.sold - r.qty, 0)",
                 [(int)$id]
             );
 

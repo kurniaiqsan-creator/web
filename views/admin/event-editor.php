@@ -2,6 +2,7 @@
 <form method="post" id="eventForm" action="<?= base_url($event ? '/admin/events/' . $event['id'] : '/admin/events') ?>" x-data="eventEditor()" @submit="prepareSubmit">
     <input type="hidden" name="status" x-model="form.status">
     <input type="hidden" name="layout" x-model="layoutJson">
+    <input type="hidden" name="ga_tiers" x-model="gaTiersJson">
 
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div class="d-flex align-items-center gap-3">
@@ -24,7 +25,7 @@
         <li class="nav-item" role="presentation">
             <button class="nav-link" :class="tab==='info'?'active':''" @click="tab='info'"><i class="cil-info me-1"></i>Info Event</button>
         </li>
-        <li class="nav-item" role="presentation">
+        <li class="nav-item" role="presentation" x-show="form.type === 'seat_map'">
             <button class="nav-link" :class="tab==='seatmap'?'active':''" @click="tab='seatmap'"><i class="cil-grid me-1"></i>Seat Map Designer</button>
         </li>
         <li class="nav-item" role="presentation">
@@ -170,10 +171,53 @@
 
     <!-- Tab: Tickets -->
     <div x-show="tab==='tickets'">
+        <!-- GA: kuota per kategori (hanya untuk General Admission) -->
+        <div class="card mb-4" x-show="form.type === 'general_admission'">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="cil-people me-1"></i>Kuota Tiket (General Admission)</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-medium-emphasis small">Atur jumlah tiket yang dijual per kategori. Sistem menolak penjualan melebihi kuota (anti-overbook). Kuota tidak bisa diturunkan di bawah jumlah yang sudah terjual/ditahan.</p>
+                <?php if (empty($categories)): ?>
+                    <div class="alert alert-warning mb-0">Belum ada kategori tiket. <a href="<?= base_url('/admin/ticket-categories') ?>">Buat kategori dulu</a> untuk menetapkan kuota.</div>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Kategori</th>
+                                    <th style="width:140px">Harga</th>
+                                    <th style="width:160px">Terjual / Ditahan</th>
+                                    <th style="width:160px">Kuota</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($categories as $c): ?>
+                                    <tr>
+                                        <td class="fw-semibold"><?= View::e($c['name']) ?></td>
+                                        <td><?= View::formatRupiah($c['price_cents']) ?></td>
+                                        <td>
+                                            <span class="text-medium-emphasis"
+                                                  x-text="(gaTiers[<?= (int)$c['id'] ?>]?.sold || 0) + ' / ' + (gaTiers[<?= (int)$c['id'] ?>]?.held || 0)"></span>
+                                        </td>
+                                        <td>
+                                            <input type="number" min="0" class="form-control form-control-sm"
+                                                   :value="gaTiers[<?= (int)$c['id'] ?>]?.quota || 0"
+                                                   @input="setQuota(<?= (int)$c['id'] ?>, $event.target.value)">
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Kategori Tiket</h5>
-                <button class="btn btn-outline-primary btn-sm"><i class="cil-plus me-1"></i>Tambah Kategori</button>
+                <a href="<?= base_url('/admin/ticket-categories') ?>" class="btn btn-outline-primary btn-sm"><i class="cil-plus me-1"></i>Kelola Kategori</a>
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -208,6 +252,15 @@ window.__EVENT_SEATS__ = <?= json_encode(array_map(function($s){
     ];
 }, $seats), JSON_UNESCAPED_UNICODE) ?>;
 
+window.__EVENT_INVENTORY__ = <?= json_encode(array_map(function($inv){
+    return [
+        'category_id' => (int)$inv['category_id'],
+        'quota'       => (int)$inv['quota'],
+        'sold'        => (int)$inv['sold'],
+        'held'        => (int)$inv['held'],
+    ];
+}, $inventory ?? []), JSON_UNESCAPED_UNICODE) ?>;
+
 function eventEditor() {
     return {
         tab: 'info',
@@ -223,8 +276,18 @@ function eventEditor() {
         },
         layoutSeats: [], selectedSeats: [], bulkCategory: '', canvasWidth: 340, canvasHeight: 220,
         layoutJson: '[]',
+        gaTiers: {},      // { [categoryId]: {quota, sold, held} }
+        gaTiersJson: '[]',
 
         init() {
+            // GA tiers dari server (edit mode).
+            const inv = window.__EVENT_INVENTORY__ || [];
+            const tiers = {};
+            inv.forEach(r => { tiers[r.category_id] = {quota: r.quota, sold: r.sold, held: r.held}; });
+            this.gaTiers = tiers;
+            // GA tidak punya seat map → paksa tab ke info kalau kebetulan di seatmap.
+            this.$watch('form.type', (v) => { if (v === 'general_admission' && this.tab === 'seatmap') this.tab = 'info'; });
+
             const seatW = 24, gap = 3;
             const existing = window.__EVENT_SEATS__ || [];
             if (existing.length > 0) {
@@ -292,11 +355,23 @@ function eventEditor() {
             if (!this.bulkCategory) return;
             this.layoutSeats.forEach(s => { if (this.selectedSeats.includes(s.label)) s.category_id = parseInt(this.bulkCategory); });
             showToast('Kategori diubah');
-        },
-        bulkStatus(status) {
+        },        bulkStatus(status) {
             this.layoutSeats.forEach(s => { if (this.selectedSeats.includes(s.label) && s.status !== 'sold') s.status = status; });
             this.selectedSeats = []; this.layoutSeats.forEach(s => s.selected = false);
             showToast('Status diubah');
+        },
+        setQuota(categoryId, value) {
+            const q = Math.max(0, parseInt(value) || 0);
+            const cur = this.gaTiers[categoryId] || {quota: 0, sold: 0, held: 0};
+            this.gaTiers[categoryId] = {...cur, quota: q};
+        },
+        serializeGaTiers() {
+            // Kirim hanya kategori dengan kuota > 0 (atau yang sudah punya penjualan).
+            return JSON.stringify(
+                Object.entries(this.gaTiers)
+                    .filter(([id, t]) => (t.quota || 0) > 0 || (t.sold || 0) > 0 || (t.held || 0) > 0)
+                    .map(([id, t]) => ({category_id: parseInt(id), quota: t.quota || 0}))
+            );
         },
         submitWith(status) {
             if (!this.form.title) { showToast('Nama event wajib diisi', 'error'); return; }
@@ -311,6 +386,7 @@ function eventEditor() {
                     x: s.x, y: s.y,
                 }))
             );
+            this.gaTiersJson = this.serializeGaTiers();
             // Tunggu Alpine flush model ke hidden input, baru submit.
             this.$nextTick(() => document.getElementById('eventForm').submit());
         },
@@ -324,6 +400,7 @@ function eventEditor() {
                     x: s.x, y: s.y,
                 }))
             );
+            this.gaTiersJson = this.serializeGaTiers();
         }
     }
 }
