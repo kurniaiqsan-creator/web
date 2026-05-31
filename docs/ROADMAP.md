@@ -60,7 +60,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Tombol "Simpan Draft" / "Publish" set `status='draft'` / `'published'`.
 - [x] **DONE** — Cancel event via `POST /admin/events/{id}/delete` → set `status='cancelled'`.
 - [x] **DONE** — Page CRUD ticket categories (`/admin/ticket-categories`): inline edit row + create modal + delete (guard: tolak hapus jika dipakai seat). Lihat **3.10**.
-- [ ] **TODO** — Soft-delete event (kolom `deleted_at` perlu ditambah ke schema). Saat ini hanya status='cancelled'.
+- [x] **DONE** — Soft-delete event (kolom `deleted_at`, migration 005). Delete set `deleted_at` + `status='cancelled'`; difilter dari list admin, editor, reports, promo editor. Public sudah aman (filter `status='published'`).
 
 #### 3.3 Venue Management
 
