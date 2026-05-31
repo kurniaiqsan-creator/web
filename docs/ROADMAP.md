@@ -139,7 +139,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [~] **WIRED** — `ApiController::createOrder()` simpan order + customer_name/email/phone + items (cek implementasi lengkap di `src/Controllers/ApiController.php:139`).
 - [x] **DONE** — `ApiController::createPaymentIntent()` + `createOrder` kini integrasi **Pakasir** (`src/Pakasir.php`). Order pending → redirect ke halaman bayar Pakasir (QRIS/VA). Kredensial via Settings per-tenant atau `.env` (`PAKASIR_SLUG`/`PAKASIR_API_KEY`).
 - [x] **DONE** — Confirmation page (`/{slug}/events/{id}/confirmation`) tampil order_code, status Lunas, dan e-ticket + QR per tiket.
-- [ ] **TODO** — Payment retry / cancel flow.
+- [x] **DONE** — Payment retry / cancel flow. Confirmation page status-aware (paid → e-ticket; pending → tombol Lanjutkan Pembayaran ke Pakasir + Batalkan; cancelled/failed → pesan + link pesan lagi). Cancel melepas kursi/held GA. `POST /{slug}/events/{id}/cancel-order`.
 
 #### 4.3 Webhook & Order Finalization
 
@@ -175,7 +175,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Schema `ticket_categories.quota`, `seats.status`.
 - [x] **DONE** — Enforce quota saat seat hold + order create (lock baris `FOR UPDATE`, cek status available, set `blocked` saat order). Self-healing: order pending basi otomatis dilepas + di-cancel saat ada order baru (TTL `seat_hold_ttl`).
 - [x] **DONE** — General Admission (event tanpa kursi: konser stadion, pacuan kuda, festival). Tabel `event_inventory(event_id, category_id, quota, sold, held)` (migration `002_event_inventory.sql`). Anti-oversell via `SELECT ... FOR UPDATE` di `createOrder` (cek `quota - sold - held >= qty`, increment `held`). `finalizeOrder` pindah held→sold; stale-pending & refund melepas held/sold. Admin set kuota per kategori di event editor (tab Tiket, muncul saat tipe = GA). Public page pakai stepper jumlah + "Tersisa N tiket".
-- [ ] **TODO** — Tampilkan "Tersisa N tiket" di event page seat-map (GA sudah; seat-map belum).
+- [x] **DONE** — Tampilkan "Tersisa N kursi" di event page seat-map (badge dari count seat available; GA sudah sebelumnya).
 
 ---
 
