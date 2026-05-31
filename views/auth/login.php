@@ -6,8 +6,8 @@
                 <div class="text-center mb-4">
                     <span class="brand-mark d-inline-flex align-items-center justify-content-center rounded-circle fw-bold mb-3"
                           style="width:44px;height:44px">V</span>
-                    <h1 class="h4 fw-bold mb-1">Masuk Admin</h1>
-                    <p class="small text-medium-emphasis mb-0">Akses dashboard untuk kelola event &amp; tiket.</p>
+                    <h1 class="h4 fw-bold mb-1">Masuk</h1>
+                    <p class="small text-medium-emphasis mb-0">Masuk ke akun kamu untuk kelola tiket atau dashboard.</p>
                 </div>
 
                 <?php if (!empty($error)): ?>
@@ -17,7 +17,7 @@
                 <form method="POST" action="<?= base_url('/login') ?>">
                     <div class="mb-3">
                         <label class="form-label">Email</label>
-                        <input type="email" name="email" class="form-control" placeholder="admin@acousticnights.com" required autofocus>
+                        <input type="email" name="email" class="form-control" placeholder="contoh@email.com" required autofocus>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Password</label>
@@ -25,6 +25,16 @@
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Masuk</button>
                 </form>
+
+                <?php if (!empty($tenant)): ?>
+                    <p class="text-center small mt-3 mb-0">
+                        <a href="<?= base_url('/' . $tenant['slug'] . '/lupa-password') ?>">Lupa password?</a>
+                    </p>
+                    <p class="text-center small text-medium-emphasis mt-1 mb-0">
+                        Belum punya akun?
+                        <a href="<?= base_url('/' . $tenant['slug'] . '/daftar') ?>">Daftar di sini</a>
+                    </p>
+                <?php endif; ?>
             </div>
         </div>
 
