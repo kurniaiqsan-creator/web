@@ -151,7 +151,8 @@ class AdminController
             );
         } else {
             $customer = Database::fetch(
-                "SELECT u.id, u.name, u.email, u.phone,
+                "SELECT u.id, u.name, u.email,
+                        COALESCE(u.phone, MAX(o.customer_phone)) AS phone,
                         COUNT(o.id) AS order_count,
                         COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total_amount_cents ELSE 0 END), 0) AS total_spent_cents
                  FROM users u
