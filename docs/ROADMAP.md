@@ -84,9 +84,9 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 #### 3.6 Scanner Tiket (QR Validation)
 
-- [~] **WIRED** — UI mode manual + camera (Alpine.js, `views/admin/scanner.php`), POST ke `/api/v1/tickets/validate`.
-- [~] **WIRED** — `ApiController::validateTicket()` ada — perlu test end-to-end dengan tiket beneran (lihat 4.3).
-- [ ] **TODO** — Camera scanner pakai library (mis. `html5-qrcode`); sekarang mode camera kemungkinan placeholder.
+- [x] **WIRED → DONE** — UI mode manual + camera (Alpine.js, `views/admin/scanner.php`), POST ke `/api/v1/tickets/validate`.
+- [x] **DONE** — `ApiController::validateTicket()` tested e2e (valid → used → already_used → invalid). Tenant-scoped (tiket tenant lain = invalid). Scan ulang dicatat sebagai `already_used` di `ticket_scans`.
+- [x] **DONE** — Camera scanner pakai `html5-qrcode` (CDN). Ekstrak token dari QR (URL `/t/{token}` atau token mentah), debounce anti-double-submit, toast hasil, riwayat scan live.
 - [ ] **TODO** — Offline grace (cache scanned tokens di IndexedDB) — PRD mention.
 
 #### 3.7 Reports
