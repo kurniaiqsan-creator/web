@@ -163,6 +163,7 @@ $router->group('/admin', function (Router $r) {
     $r->get('/customers/export', [AdminController::class, 'customersExport']);
     $r->get('/customers/{id}', [AdminController::class, 'customerDetail']);
     $r->get('/reports', [AdminController::class, 'reports']);
+    $r->get('/reports/export', [AdminController::class, 'reportsExport']);
     $r->get('/scanner', [AdminController::class, 'scanner']);
     $r->get('/logs', [AdminController::class, 'logs']);
     $r->post('/logs/notifications/{id}/retry', [AdminController::class, 'logRetryNotification']);

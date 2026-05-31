@@ -659,20 +659,140 @@ class AdminController
 
     public function reports(): string
     {
-        $tenantId = $_SESSION['tenant_id'] ?? 0;
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $filter = $this->buildReportFilter();
 
         $byEvent = Database::fetchAll(
-            "SELECT e.title, COUNT(o.id) as order_count, COALESCE(SUM(o.total_amount_cents), 0) as total_sales
+            "SELECT e.id, e.title, e.start_time,
+                    COUNT(DISTINCT o.id) AS order_count,
+                    COALESCE(SUM(o.total_amount_cents), 0) AS total_sales,
+                    (SELECT COUNT(*) FROM tickets t
+                       JOIN orders o2 ON o2.id = t.order_id
+                       WHERE t.event_id = e.id AND o2.status = 'paid') AS tickets_total,
+                    (SELECT COUNT(*) FROM tickets t
+                       JOIN orders o2 ON o2.id = t.order_id
+                       WHERE t.event_id = e.id AND o2.status = 'paid' AND t.status = 'used') AS tickets_used
              FROM events e
-             LEFT JOIN orders o ON e.id = o.event_id AND o.status = 'paid'
+             LEFT JOIN orders o ON e.id = o.event_id AND o.status = 'paid' {$filter['orderDateSql']}
              WHERE e.tenant_id = ?
-             GROUP BY e.id ORDER BY e.start_time DESC",
-            [$tenantId]
+             GROUP BY e.id
+             ORDER BY e.start_time DESC",
+            array_merge($filter['orderDateParams'], [$tenantId])
+        );
+
+        // Breakdown harian (penjualan paid per hari) untuk periode terpilih.
+        $daily = Database::fetchAll(
+            "SELECT DATE(o.updated_at) AS d,
+                    COUNT(*) AS order_count,
+                    COALESCE(SUM(o.total_amount_cents), 0) AS total_sales
+             FROM orders o
+             WHERE o.tenant_id = ? AND o.status = 'paid' {$filter['updatedDateSql']}
+             GROUP BY DATE(o.updated_at)
+             ORDER BY d DESC
+             LIMIT 90",
+            array_merge([$tenantId], $filter['updatedDateParams'])
         );
 
         return View::render('admin/reports', [
-            'title' => 'Laporan', 'byEvent' => $byEvent,
+            'title'   => 'Laporan',
+            'byEvent' => $byEvent,
+            'daily'   => $daily,
+            'filters' => $filter['filters'],
         ]);
+    }
+
+    /**
+     * Filter periode laporan dari $_GET (from/to, format Y-m-d).
+     * Mengembalikan klausa untuk dua basis tanggal: o.created_at (event join) &
+     * o.updated_at (tanggal lunas, untuk daily breakdown & attendance).
+     *
+     * @return array{filters:array{from:string,to:string}, orderDateSql:string, orderDateParams:array, updatedDateSql:string, updatedDateParams:array}
+     */
+    private function buildReportFilter(): array
+    {
+        $from = trim((string)($_GET['from'] ?? ''));
+        $to   = trim((string)($_GET['to'] ?? ''));
+        $isYmd = static fn(string $d): bool => (bool)preg_match('/^\d{4}-\d{2}-\d{2}$/', $d);
+        if (!$isYmd($from)) $from = '';
+        if (!$isYmd($to))   $to = '';
+
+        $orderDate = '';
+        $orderParams = [];
+        $updatedDate = [];
+        $updatedParams = [];
+
+        if ($from !== '') {
+            $orderDate .= ' AND o.updated_at >= ?';
+            $orderParams[] = $from . ' 00:00:00';
+            $updatedDate[] = 'o.updated_at >= ?';
+            $updatedParams[] = $from . ' 00:00:00';
+        }
+        if ($to !== '') {
+            $orderDate .= ' AND o.updated_at <= ?';
+            $orderParams[] = $to . ' 23:59:59';
+            $updatedDate[] = 'o.updated_at <= ?';
+            $updatedParams[] = $to . ' 23:59:59';
+        }
+
+        return [
+            'filters'          => ['from' => $from, 'to' => $to],
+            'orderDateSql'     => $orderDate,
+            'orderDateParams'  => $orderParams,
+            'updatedDateSql'   => $updatedDate ? (' AND ' . implode(' AND ', $updatedDate)) : '',
+            'updatedDateParams'=> $updatedParams,
+        ];
+    }
+
+    /**
+     * GET /admin/reports/export — CSV laporan per-event (hormati filter periode).
+     */
+    public function reportsExport(): never
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $filter = $this->buildReportFilter();
+
+        $rows = Database::fetchAll(
+            "SELECT e.title, e.start_time,
+                    COUNT(DISTINCT o.id) AS order_count,
+                    COALESCE(SUM(o.total_amount_cents), 0) AS total_sales,
+                    (SELECT COUNT(*) FROM tickets t
+                       JOIN orders o2 ON o2.id = t.order_id
+                       WHERE t.event_id = e.id AND o2.status = 'paid') AS tickets_total,
+                    (SELECT COUNT(*) FROM tickets t
+                       JOIN orders o2 ON o2.id = t.order_id
+                       WHERE t.event_id = e.id AND o2.status = 'paid' AND t.status = 'used') AS tickets_used
+             FROM events e
+             LEFT JOIN orders o ON e.id = o.event_id AND o.status = 'paid' {$filter['orderDateSql']}
+             WHERE e.tenant_id = ?
+             GROUP BY e.id
+             ORDER BY e.start_time DESC",
+            array_merge($filter['orderDateParams'], [$tenantId])
+        );
+
+        $filename = 'laporan-' . date('Y-m-d-His') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: no-store');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF"); // BOM
+        fputcsv($out, ['Event', 'Tanggal', 'Total Penjualan', 'Jumlah Order', 'Tiket Terjual', 'Tiket Hadir (used)', 'Attendance %']);
+        foreach ($rows as $r) {
+            $total = (int)$r['tickets_total'];
+            $used = (int)$r['tickets_used'];
+            $pct = $total > 0 ? round($used / $total * 100, 1) : 0;
+            fputcsv($out, [
+                $r['title'],
+                $r['start_time'],
+                (int)$r['total_sales'],
+                (int)$r['order_count'],
+                $total,
+                $used,
+                $pct,
+            ]);
+        }
+        fclose($out);
+        exit;
     }
 
     public function scanner(): string
