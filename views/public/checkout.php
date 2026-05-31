@@ -40,9 +40,9 @@
                         <span x-text="eventDate"></span> · <span x-text="venueName"></span>
                     </p>
                     <div class="d-flex flex-column gap-1 small">
-                        <template x-for="s in seats" :key="s.label">
+                        <template x-for="(s, i) in seats" :key="i">
                             <div class="d-flex justify-content-between">
-                                <span class="text-medium-emphasis" x-text="'Kursi ' + s.label + (s.category ? ' (' + s.category + ')' : '')"></span>
+                                <span class="text-medium-emphasis" x-text="s.label ? ('Kursi ' + s.label + (s.category ? ' (' + s.category + ')' : '')) : (s.category || 'Tiket')"></span>
                                 <span x-text="formatRupiah(s.price)"></span>
                             </div>
                         </template>
@@ -70,6 +70,21 @@
             <div x-show="step === 0" class="card">
                 <div class="card-body">
                     <h2 class="h6 fw-semibold mb-3">Data Pemesan</h2>
+                    <?php if (empty($customer)): ?>
+                        <div class="alert alert-light border d-flex align-items-center gap-2 py-2 small mb-3">
+                            <i class="cil-user text-primary"></i>
+                            <span>
+                                Sudah punya akun?
+                                <a href="<?= base_url('/' . $tenant['slug'] . '/masuk?next=' . urlencode('/' . $tenant['slug'] . '/events/' . $event['id'] . '/checkout')) ?>">Masuk</a>
+                                supaya pesanan tersimpan di akunmu.
+                            </span>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 small mb-3">
+                            <i class="cil-check-circle"></i>
+                            <span>Masuk sebagai <strong><?= View::e($customer['name']) ?></strong>. Pesanan akan tersimpan di akunmu.</span>
+                        </div>
+                    <?php endif; ?>
                     <div class="mb-3">
                         <label class="form-label">Nama Lengkap</label>
                         <input type="text" x-model="name" class="form-control" placeholder="Masukkan nama">
@@ -144,7 +159,9 @@ function checkout() {
         venueName: '<?= View::e($event['venue_name'] ?? '') ?>',
         eventDate: '',
         step: 0,
-        name: '', email: '', phone: '',
+        name: '<?= View::e($customer['name'] ?? '') ?>',
+        email: '<?= View::e($customer['email'] ?? '') ?>',
+        phone: '<?= View::e($customer['phone'] ?? '') ?>',
         seats: [],
         seatHoldId: null,
         subtotal: 0,
@@ -155,6 +172,7 @@ function checkout() {
         loading: false,
         orderId: null,
         orderCode: '',
+        sandbox: false,
         vaNumber: '8234 5678 9012 3456',
 
         get grandTotal() { return Math.max(0, this.subtotal - this.discount); },
@@ -221,7 +239,6 @@ function checkout() {
                         currency: 'idr',
                         customer: {name: this.name, email: this.email, phone: this.phone},
                         promo_code: this.appliedCode || null,
-                        discount_cents: this.discount,
                         items: this.seats.map(s => ({
                             event_id: this.eventId,
                             seat_label: s.label,
@@ -234,9 +251,20 @@ function checkout() {
                 if (data.order_id) {
                     this.orderId = data.order_id;
                     this.orderCode = data.order_code;
+                    const session = data.payment_session || {};
+                    this.sandbox = !!session.sandbox;
+
+                    // Redirect ke halaman pembayaran Pakasir kalau tersedia.
+                    if (session.checkout_url) {
+                        sessionStorage.removeItem('visi_cart');
+                        window.location.href = session.checkout_url;
+                        return;
+                    }
+                    // PG belum dikonfigurasi: tampilkan layar tunggu + opsi simulasi (dev).
                     this.step = 2;
                 } else {
-                    showToast('Gagal membuat order', 'error');
+                    const msg = (data.error && data.error.message) ? data.error.message : 'Gagal membuat order';
+                    showToast(msg, 'error');
                 }
             } catch (e) {
                 showToast('Gagal memproses pembayaran', 'error');
@@ -247,24 +275,19 @@ function checkout() {
         async simulatePayment() {
             this.loading = true;
             try {
-                await fetch(base_url('/webhooks/payment'), {
+                const res = await fetch(base_url('/api/v1/payments/simulate'), {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        id: 'evt_' + Date.now(),
-                        type: 'payment_intent.succeeded',
-                        data: {object: {
-                            id: 'pi_' + Date.now(),
-                            amount: this.grandTotal,
-                            currency: 'idr',
-                            status: 'succeeded',
-                            provider: 'midtrans',
-                            metadata: {tenant_id: String(this.tenantId), order_id: String(this.orderId), event_id: String(this.eventId)},
-                        }}
-                    })
+                    body: JSON.stringify({ order_code: this.orderCode })
                 });
-                sessionStorage.removeItem('visi_cart');
-                window.location.href = base_url('/' + this.tenantSlug + '/events/' + this.eventId + '/confirmation?order=' + encodeURIComponent(this.orderCode));
+                const data = await res.json();
+                if (res.ok) {
+                    sessionStorage.removeItem('visi_cart');
+                    window.location.href = base_url('/' + this.tenantSlug + '/events/' + this.eventId + '/confirmation?order=' + encodeURIComponent(this.orderCode));
+                } else {
+                    showToast((data.error && data.error.message) || 'Gagal simulasi', 'error');
+                    this.loading = false;
+                }
             } catch (e) {
                 showToast('Gagal mengkonfirmasi pembayaran', 'error');
                 this.loading = false;

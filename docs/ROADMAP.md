@@ -3,7 +3,7 @@
 > **Tujuan dokumen ini:** snapshot status implementasi vs PRD. Setiap task punya status, file utama, dan acceptance criteria singkat. AI / developer lain bisa lanjutin tanpa rombak — tinggal cari task `STATUS: TODO` berikutnya.
 
 PRD sumber: `+PRD.txt` (lihat lampiran sesi atau request ulang).
-Strategi MVP: **Path A — Single-tenant** (tenant tetap `acoustic-nights`, drop public signup). Schema tetap multi-tenant ready.
+Strategi MVP: **Path A — Single-tenant** (tenant tetap `acoustic-nights`, drop public *tenant* signup / onboarding). Schema tetap multi-tenant ready. Catatan: akun *customer* (pembeli tiket) tetap ada — lihat 4.0.
 
 Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstrap 5.4.1 (CDN). Tidak ada build step.
 
@@ -114,6 +114,18 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 ### 4. Customer Flow (Public)
 
+#### 4.0 Akun Customer (BARU)
+
+- [x] **DONE** — Registrasi & login customer per-tenant (`src/Controllers/CustomerController.php`). Route: `/{slug}/masuk`, `/{slug}/daftar`, `/{slug}/keluar`, `/{slug}/akun`. Pakai `users.role='customer'` + `tenant_id`. Session terpisah dari admin (`customer_id` vs `user_id`) supaya tidak bentrok.
+- [x] **DONE** — Auto-link order guest lama: saat daftar/masuk, semua `orders` dengan `user_id IS NULL` + `customer_email` sama otomatis di-tautkan ke akun. Mengurangi data guest terpisah.
+- [x] **DONE** — `createOrder` set `orders.user_id` bila customer login (tenant cocok). Guest tetap jalan (user_id NULL).
+- [x] **DONE** — Halaman "Akun Saya" (`views/public/account.php`): histori pesanan + status badge + link e-ticket (paid) / lanjut bayar (pending).
+- [x] **DONE** — Checkout prefill nama/email/telepon untuk customer login + nudge "Masuk" untuk guest (`views/public/checkout.php`).
+- [x] **DONE** — Header publik: tombol Masuk/Daftar (guest) atau nama akun + Keluar (login) (`views/layouts/main.php`).
+- [x] **DONE** — Admin login dibatasi role admin/staff/system_admin saja (`AuthController::login`), customer tidak bisa masuk ke panel admin.
+- [ ] **TODO** — Reset password (lupa password) via email. **BLOCKED** sampai SMTP tersedia (lihat section 5).
+- [ ] **TODO** — Edit profil customer (nama/telepon/password) di halaman akun.
+
 #### 4.1 Browse
 
 - [x] **DONE** — Homepage daftar tenant (`/`), tenant home daftar event (`/{slug}`), event detail + seat map (`/{slug}/events/{id}`).
@@ -124,16 +136,16 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 - [~] **WIRED → PARTIAL** — Form checkout (`/{slug}/events/{id}/checkout`) ambil seats dari query, POST ke `/api/v1/orders`. Lihat `views/public/checkout.php`.
 - [~] **WIRED** — `ApiController::createOrder()` simpan order + customer_name/email/phone + items (cek implementasi lengkap di `src/Controllers/ApiController.php:139`).
-- [ ] **TODO** — `ApiController::createPaymentIntent()` — stub saat ini, belum panggil Midtrans/Xendit/DOKU API. **BLOCKED** sampai user kasih PG sandbox keys.
-- [ ] **TODO** — Confirmation page (`/{slug}/events/{id}/confirmation`) sekarang masih placeholder — perlu show order_code, status, link e-ticket.
+- [x] **DONE** — `ApiController::createPaymentIntent()` + `createOrder` kini integrasi **Pakasir** (`src/Pakasir.php`). Order pending → redirect ke halaman bayar Pakasir (QRIS/VA). Kredensial via Settings per-tenant atau `.env` (`PAKASIR_SLUG`/`PAKASIR_API_KEY`).
+- [x] **DONE** — Confirmation page (`/{slug}/events/{id}/confirmation`) tampil order_code, status Lunas, dan e-ticket + QR per tiket.
 - [ ] **TODO** — Payment retry / cancel flow.
 
 #### 4.3 Webhook & Order Finalization
 
-- [~] **WIRED** — `POST /webhooks/payment` ada (`ApiController::paymentWebhook`, line 346). **BLOCKED** untuk e2e sampai PG terintegrasi.
-- [ ] **TODO** — Verify webhook signature per provider (PRD requirement: "All webhooks must verify provider signature").
-- [ ] **TODO** — Idempotency check (gunakan `webhook_logs` + dedup by `provider_payment_id`).
-- [ ] **TODO** — Atomic finalize: hold → ticket (transaction), set seats `sold`, generate QR token, dispatch notifications.
+- [x] **DONE** — `POST /webhooks/payment` handle payload **Pakasir** (`{amount, order_id, project, status, completed_at}`), verifikasi via Transaction Detail API (sumber kebenaran), lalu finalize. Sandbox: `/api/v1/payments/simulate`.
+- [ ] **TODO** — Verify webhook signature per provider (PRD requirement). Pakasir tidak pakai signature → verifikasi via detail API + cek nominal/order.
+- [x] **DONE** — Idempotency: finalize hanya jalan kalau `order.status != 'paid'` (re-deliver webhook aman). Semua webhook dicatat di `webhook_logs` + `verification_result`.
+- [x] **DONE** — Atomic finalize: hold → ticket (transaction), set seats `sold` / GA held→sold, generate QR token. (Bugfix: dulu finalize tidak jalan karena salah resolve order_code vs id.)
 
 #### 4.4 E-Ticket
 
@@ -160,7 +172,8 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 - [x] **DONE** — Schema `ticket_categories.quota`, `seats.status`.
 - [x] **DONE** — Enforce quota saat seat hold + order create (lock baris `FOR UPDATE`, cek status available, set `blocked` saat order). Self-healing: order pending basi otomatis dilepas + di-cancel saat ada order baru (TTL `seat_hold_ttl`).
-- [ ] **TODO** — Tampilkan "Tersisa N tiket" di event page.
+- [x] **DONE** — General Admission (event tanpa kursi: konser stadion, pacuan kuda, festival). Tabel `event_inventory(event_id, category_id, quota, sold, held)` (migration `002_event_inventory.sql`). Anti-oversell via `SELECT ... FOR UPDATE` di `createOrder` (cek `quota - sold - held >= qty`, increment `held`). `finalizeOrder` pindah held→sold; stale-pending & refund melepas held/sold. Admin set kuota per kategori di event editor (tab Tiket, muncul saat tipe = GA). Public page pakai stepper jumlah + "Tersisa N tiket".
+- [ ] **TODO** — Tampilkan "Tersisa N tiket" di event page seat-map (GA sudah; seat-map belum).
 
 ---
 
@@ -192,7 +205,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 Mismatch yang perlu keputusan:
 
 1. **Stack berbeda dari PRD.** PRD section 2 sebut "Django backend + Next.js frontend". Implementasi nyata = PHP murni server-rendered. Saya pakai yang nyata (PHP) karena codebase sudah jalan; PRD section 2 sebaiknya di-update atau diberi note "Phase 1 sementara di PHP, migrasi nanti jika perlu".
-2. **Payment provider.** PRD sebut Midtrans / Xendit / DOKU. Belum ada keys → semua flow PG di-stub. Action: minta sandbox keys + pilih provider default untuk Phase 1.
+2. **Payment provider.** PRD sebut Midtrans / Xendit / DOKU. **Keputusan: pakai Pakasir** (QRIS + Virtual Account, https://pakasir.com). Sudah terintegrasi (`src/Pakasir.php`). Tinggal isi `PAKASIR_SLUG` + `PAKASIR_API_KEY` di Settings/`.env` dan set Webhook URL proyek Pakasir ke `/webhooks/payment`.
 3. **Notification provider.** PRD sebut SendGrid + Twilio. Email pakai **SMTP (Gmail App Password)** — gratis, tanpa setup DNS, cukup untuk skala project. WhatsApp diganti ke **Fonnte** (lebih relevan & murah untuk pasar Indonesia). Sama — perlu keys.
 4. **QR generation.** PRD section 5 sebut external API `api.qrserver.com` atau server-side library. Saat ini belum di-generate. Rekomendasi: server-side lewat `endroid/qr-code` (composer) untuk avoid external dependency.
 

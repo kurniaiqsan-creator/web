@@ -55,21 +55,16 @@ $mask = fn(string $val): string => $val === '' ? '' : '••••••••�
             <form method="post" action="<?= base_url('/admin/settings') ?>" class="card">
                 <input type="hidden" name="section" value="payment">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0"><i class="cil-credit-card me-2"></i>Payment Gateway</h5>
+                    <h5 class="card-title mb-0"><i class="cil-credit-card me-2"></i>Payment Gateway (Pakasir)</h5>
                     <button class="btn btn-primary btn-sm" type="submit"><i class="cil-save me-1"></i>Simpan</button>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3"><label class="form-label">Provider</label>
-                        <select class="form-select" name="provider">
-                            <?php foreach (['midtrans' => 'Midtrans', 'xendit' => 'Xendit', 'doku' => 'DOKU'] as $val => $label): ?>
-                                <option value="<?= $val ?>" <?= ($payment['provider'] ?? 'midtrans') === $val ? 'selected' : '' ?>><?= $label ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3"><label class="form-label">Server Key</label>
-                        <input type="password" class="form-control" name="server_key" value="<?= View::e($mask((string)($payment['server_key'] ?? ''))) ?>" placeholder="Kosongkan untuk pertahankan nilai yang ada"></div>
-                    <div class="mb-3"><label class="form-label">Client Key</label>
-                        <input type="password" class="form-control" name="client_key" value="<?= View::e($mask((string)($payment['client_key'] ?? ''))) ?>" placeholder="Kosongkan untuk pertahankan nilai yang ada"></div>
+                    <?php $pakasir = $payment['pakasir'] ?? []; ?>
+                    <p class="small text-medium-emphasis">Dapatkan <strong>Slug</strong> & <strong>API Key</strong> dari halaman detail Proyek di <a href="https://app.pakasir.com" target="_blank" rel="noopener">app.pakasir.com</a>. Set Webhook URL proyek ke <code><?= View::e(base_url('/webhooks/payment')) ?></code>.</p>
+                    <div class="mb-3"><label class="form-label">Project Slug</label>
+                        <input class="form-control" name="pakasir_slug" value="<?= View::e((string)($pakasir['slug'] ?? '')) ?>" placeholder="contoh: acoustic-nights"></div>
+                    <div class="mb-3"><label class="form-label">API Key</label>
+                        <input type="password" class="form-control" name="pakasir_api_key" value="<?= View::e($mask((string)($pakasir['api_key'] ?? ''))) ?>" placeholder="Kosongkan untuk pertahankan nilai yang ada"></div>
                 </div>
             </form>
         </div>

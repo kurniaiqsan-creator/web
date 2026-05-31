@@ -812,18 +812,18 @@ class AdminController
                 break;
 
             case 'payment':
-                $provider = (string)($_POST['provider'] ?? 'midtrans');
-                if (!in_array($provider, ['midtrans', 'xendit', 'doku'], true)) $provider = 'midtrans';
                 $settings['payment'] = $settings['payment'] ?? [];
-                $settings['payment']['provider'] = $provider;
-                // Hanya update key kalau benar2 diketik (skip dot-mask).
-                $serverKey = (string)($_POST['server_key'] ?? '');
-                $clientKey = (string)($_POST['client_key'] ?? '');
-                if ($serverKey !== '' && !str_contains($serverKey, '•')) {
-                    $settings['payment']['server_key'] = $serverKey;
+                $settings['payment']['provider'] = 'pakasir';
+                $settings['payment']['pakasir'] = $settings['payment']['pakasir'] ?? [];
+
+                $pkSlug = trim((string)($_POST['pakasir_slug'] ?? ''));
+                if ($pkSlug !== '') {
+                    $settings['payment']['pakasir']['slug'] = $pkSlug;
                 }
-                if ($clientKey !== '' && !str_contains($clientKey, '•')) {
-                    $settings['payment']['client_key'] = $clientKey;
+                // API key rahasia: hanya update kalau diketik (skip dot-mask).
+                $pkKey = (string)($_POST['pakasir_api_key'] ?? '');
+                if ($pkKey !== '' && !str_contains($pkKey, '•')) {
+                    $settings['payment']['pakasir']['api_key'] = $pkKey;
                 }
                 Database::update('tenants',
                     ['settings' => json_encode($settings, JSON_UNESCAPED_UNICODE)],

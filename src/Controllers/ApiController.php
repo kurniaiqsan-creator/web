@@ -114,7 +114,7 @@ class ApiController
         Database::insert('seat_holds', [
             'hold_uid'   => $holdUid,
             'event_id'   => $eventId,
-            'user_id'    => $_SESSION['user_id'] ?? null,
+            'user_id'    => $_SESSION['user_id'] ?? ($_SESSION['customer_id'] ?? null),
             'seats'      => json_encode($seatLabels),
             'expires_at' => $expiresAt,
             'status'     => 'active',
@@ -262,9 +262,18 @@ class ApiController
             $totalCents = max(0, $subtotalCents - $discountCents);
             $orderCode = 'ORD-' . str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
+            // Tautkan ke akun customer bila sedang login pada tenant yang sama.
+            // Kalau guest (belum login), user_id tetap NULL.
+            $customerUserId = null;
+            if (!empty($_SESSION['customer_id'])
+                && (int)($_SESSION['customer_tenant_id'] ?? 0) === $tenantId) {
+                $customerUserId = (int)$_SESSION['customer_id'];
+            }
+
             $orderId = Database::insert('orders', [
                 'order_uid'         => 'order_' . bin2hex(random_bytes(8)),
                 'tenant_id'         => $tenantId,
+                'user_id'           => $customerUserId,
                 'event_id'          => $eventId,
                 'order_code'        => $orderCode,
                 'customer_name'     => $customer['name']  ?? null,
@@ -273,7 +282,7 @@ class ApiController
                 'total_amount_cents'=> $totalCents,
                 'currency'          => $currency,
                 'status'            => 'pending',
-                'payment_provider'  => 'midtrans',
+                'payment_provider'  => 'pakasir',
                 'created_at'        => date('Y-m-d H:i:s'),
             ]);
 
@@ -317,6 +326,18 @@ class ApiController
 
             Database::commit();
 
+            // Bangun URL pembayaran Pakasir (kalau dikonfigurasi).
+            $tenantSettings = $this->tenantSettings($tenantId);
+            $pakasir = Pakasir::fromConfig($tenantSettings);
+            $paymentUrl = null;
+            if ($pakasir !== null) {
+                $slug = Database::fetch('SELECT slug FROM tenants WHERE id = ?', [$tenantId]);
+                $redirect = ($slug && $eventId)
+                    ? base_url('/' . $slug['slug'] . '/events/' . $eventId . '/confirmation?order=' . rawurlencode($orderCode))
+                    : null;
+                $paymentUrl = $pakasir->paymentUrl($totalCents, $orderCode, $redirect, 'all');
+            }
+
             return $this->json([
                 'order_id'        => (string)$orderId,
                 'order_code'      => $orderCode,
@@ -326,9 +347,10 @@ class ApiController
                 'currency'        => $currency,
                 'status'          => 'pending',
                 'payment_session' => [
-                    'provider'         => 'midtrans',
-                    'payment_intent_id' => 'midpi_' . bin2hex(random_bytes(4)),
-                    'checkout_url'     => '/checkout/pay/' . $orderCode,
+                    'provider'     => 'pakasir',
+                    'checkout_url' => $paymentUrl,
+                    'configured'   => $pakasir !== null,
+                    'sandbox'      => Pakasir::isSandbox(),
                 ],
             ], 201);
         } catch (Exception $e) {
@@ -434,10 +456,45 @@ class ApiController
     public function createPaymentIntent(): string
     {
         $data = $this->input();
+        $orderCode = (string)($data['order_id'] ?? '');
+        if ($orderCode === '') {
+            return $this->error('VALIDATION', 'order_id wajib diisi');
+        }
+
+        $order = Database::fetch('SELECT * FROM orders WHERE order_code = ?', [$orderCode]);
+        if (!$order) {
+            return $this->error('NOT_FOUND', 'Order tidak ditemukan', 404);
+        }
+
+        $tenantSettings = $this->tenantSettings((int)$order['tenant_id']);
+        $pakasir = Pakasir::fromConfig($tenantSettings);
+        if ($pakasir === null) {
+            return $this->error('PG_NOT_CONFIGURED', 'Payment gateway (Pakasir) belum dikonfigurasi', 503);
+        }
+
+        $amount = (int)$order['total_amount_cents'];
+        $method = (string)($data['method'] ?? 'all');
+
+        // Redirect kembali ke halaman konfirmasi setelah bayar.
+        $redirect = null;
+        $slug = Database::fetch('SELECT slug FROM tenants WHERE id = ?', [(int)$order['tenant_id']]);
+        if ($slug && $order['event_id']) {
+            $redirect = base_url('/' . $slug['slug'] . '/events/' . $order['event_id'] . '/confirmation?order=' . rawurlencode($orderCode));
+        }
+
+        $paymentUrl = $pakasir->paymentUrl($amount, $orderCode, $redirect, $method);
+
+        Database::update('orders',
+            ['payment_provider' => 'pakasir', 'payment_reference' => $orderCode],
+            'id = ?', [(int)$order['id']]
+        );
+
         return $this->json([
-            'provider'          => 'midtrans',
-            'payment_intent_id' => 'midpi_' . bin2hex(random_bytes(4)),
-            'checkout_url'      => '/checkout/pay/' . ($data['order_id'] ?? ''),
+            'provider'     => 'pakasir',
+            'order_code'   => $orderCode,
+            'amount'       => $amount,
+            'checkout_url' => $paymentUrl,
+            'sandbox'      => Pakasir::isSandbox(),
         ]);
     }
 
@@ -492,6 +549,44 @@ class ApiController
             'total_discount_cents' => $totalDiscount,
             'final_amount_cents'   => max(0, $subtotal - $totalDiscount),
         ]);
+    }
+
+    /**
+     * POST /api/v1/payments/simulate — simulasi pembayaran sukses (HANYA sandbox).
+     * Body: { order_code }. Memanggil Pakasir paymentsimulation lalu finalize lokal.
+     */
+    public function simulatePayment(): string
+    {
+        if (!Pakasir::isSandbox()) {
+            return $this->error('FORBIDDEN', 'Simulasi hanya tersedia di mode sandbox', 403);
+        }
+
+        $data = $this->input();
+        $orderCode = (string)($data['order_code'] ?? '');
+        $order = $orderCode !== ''
+            ? Database::fetch('SELECT * FROM orders WHERE order_code = ?', [$orderCode])
+            : null;
+        if (!$order) {
+            return $this->error('NOT_FOUND', 'Order tidak ditemukan', 404);
+        }
+
+        $tenantSettings = $this->tenantSettings((int)$order['tenant_id']);
+        $pakasir = Pakasir::fromConfig($tenantSettings);
+
+        // Kalau Pakasir terkonfigurasi, panggil API simulasi (memicu webhook asli).
+        if ($pakasir !== null) {
+            $res = $pakasir->simulate((int)$order['total_amount_cents'], $orderCode);
+            if (!$res['ok']) {
+                return $this->error('SIMULATE_FAILED', $res['error'] ?? 'Gagal simulasi', 502);
+            }
+            return $this->json(['status' => 'simulated', 'note' => 'Webhook Pakasir akan menyelesaikan order']);
+        }
+
+        // Tanpa kredensial: finalize langsung (dev lokal tanpa akun Pakasir).
+        if ($order['status'] !== 'paid') {
+            $this->finalizeOrder((int)$order['id']);
+        }
+        return $this->json(['status' => 'finalized_local']);
     }
 
     public function validateTicket(): string
@@ -590,39 +685,83 @@ class ApiController
     {
         $payload = $this->input();
 
-        // Log webhook
-        Database::insert('webhook_logs', [
-            'provider'     => $payload['data']['object']['provider'] ?? 'midtrans',
-            'endpoint'     => '/webhooks/payment',
-            'raw_request'  => json_encode($payload),
-            'headers'      => json_encode(getallheaders()),
-            'success'      => 1,
-            'response_code'=> 200,
-            'created_at'   => date('Y-m-d H:i:s'),
-        ]);
+        // Pakasir mengirim: { amount, order_id, project, status, payment_method, completed_at }
+        // order_id = order_code di sistem kita.
+        $orderCode = (string)($payload['order_id'] ?? '');
+        $amount    = (int)($payload['amount'] ?? 0);
+        $status    = (string)($payload['status'] ?? '');
+        $provider  = 'pakasir';
 
-        // Process payment
-        $type = $payload['type'] ?? '';
-        if ($type === 'payment_intent.succeeded') {
-            $meta = $payload['data']['object']['metadata'] ?? [];
-            $orderId = $meta['order_id'] ?? null;
+        $verified = false;
+        $finalized = false;
 
-            if ($orderId) {
-                $this->finalizeOrder($orderId);
+        // Cari order dulu (untuk tenant context & verifikasi nominal).
+        $order = $orderCode !== ''
+            ? Database::fetch('SELECT * FROM orders WHERE order_code = ?', [$orderCode])
+            : null;
+
+        // Verifikasi ke Pakasir (sumber kebenaran), jangan percaya payload mentah.
+        if ($order && $status === 'completed') {
+            $tenantSettings = $this->tenantSettings((int)$order['tenant_id']);
+            $pakasir = Pakasir::fromConfig($tenantSettings);
+            if ($pakasir !== null) {
+                $detail = $pakasir->detail((int)$order['total_amount_cents'], $orderCode);
+                if ($detail['ok'] && ($detail['transaction']['status'] ?? '') === 'completed') {
+                    $verified = true;
+                }
+            } else {
+                // Tidak ada kredensial (mis. dev tanpa setup): percayai payload tapi
+                // tetap cek nominal cocok dengan order.
+                $verified = ($amount === (int)$order['total_amount_cents']);
+            }
+
+            if ($verified && $order['status'] !== 'paid') {
+                $this->finalizeOrder((int)$order['id']);
+                $finalized = true;
             }
         }
 
-        return $this->json(['status' => 'ok']);
+        // Log webhook (dengan hasil verifikasi).
+        Database::insert('webhook_logs', [
+            'provider'            => $provider,
+            'endpoint'            => '/webhooks/payment',
+            'raw_request'         => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            'headers'             => json_encode(getallheaders()),
+            'verification_result' => json_encode(['verified' => $verified, 'finalized' => $finalized, 'order_found' => (bool)$order]),
+            'processed_at'        => date('Y-m-d H:i:s'),
+            'success'             => $verified ? 1 : 0,
+            'response_code'       => 200,
+            'created_at'          => date('Y-m-d H:i:s'),
+        ]);
+
+        return $this->json(['status' => 'ok', 'verified' => $verified]);
     }
 
-    private function finalizeOrder(string $orderId): void
+    /**
+     * Ambil tenants.settings (decoded) untuk tenant tertentu.
+     * @return array<string,mixed>
+     */
+    private function tenantSettings(int $tenantId): array
+    {
+        if ($tenantId <= 0) {
+            return [];
+        }
+        $row = Database::fetch('SELECT settings FROM tenants WHERE id = ?', [$tenantId]);
+        $decoded = json_decode($row['settings'] ?? '{}', true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param int $orderId ID numerik order (BUKAN order_code).
+     */
+    private function finalizeOrder(int $orderId): void
     {
         Database::beginTransaction();
         try {
             Database::update('orders', [
                 'status'      => 'paid',
                 'updated_at'  => date('Y-m-d H:i:s'),
-            ], 'id = ? OR order_code = ?', [$orderId, $orderId]);
+            ], 'id = ?', [$orderId]);
 
             // Create tickets
             $items = Database::fetchAll('SELECT * FROM order_items WHERE order_id = ?', [$orderId]);

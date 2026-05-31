@@ -175,6 +175,7 @@ $router->group('/api/v1', function (Router $r) {
     $r->post('/seat-holds/{id}/release', [ApiController::class, 'releaseSeatHold']);
     $r->post('/orders', [ApiController::class, 'createOrder']);
     $r->post('/payments/create-intent', [ApiController::class, 'createPaymentIntent']);
+    $r->post('/payments/simulate', [ApiController::class, 'simulatePayment']);
     $r->post('/promotions/evaluate', [ApiController::class, 'evaluatePromo']);
     $r->post('/tickets/validate', [ApiController::class, 'validateTicket']);
     $r->get('/orders/{id}', [ApiController::class, 'getOrder']);
@@ -183,6 +184,16 @@ $router->group('/api/v1', function (Router $r) {
 
 // ===== WEBHOOK (harus sebelum /{tenantSlug}) =====
 $router->post('/webhooks/payment', [ApiController::class, 'paymentWebhook']);
+
+// ===== CUSTOMER ACCOUNT (per-tenant, harus sebelum catch-all /{tenantSlug}) =====
+// Path statis ('masuk','daftar',...) didahulukan agar tidak tertangkap
+// route detail event /{tenantSlug}/events/{eventSlug}.
+$router->get('/{tenantSlug}/masuk', [CustomerController::class, 'loginForm']);
+$router->post('/{tenantSlug}/masuk', [CustomerController::class, 'login']);
+$router->get('/{tenantSlug}/daftar', [CustomerController::class, 'registerForm']);
+$router->post('/{tenantSlug}/daftar', [CustomerController::class, 'register']);
+$router->get('/{tenantSlug}/keluar', [CustomerController::class, 'logout']);
+$router->get('/{tenantSlug}/akun', [CustomerController::class, 'account']);
 
 // ===== TENANT ROUTES (catch-all, harus TERAKHIR) =====
 $router->get('/{tenantSlug}', function (string $tenantSlug) {
