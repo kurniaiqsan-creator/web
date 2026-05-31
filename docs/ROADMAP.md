@@ -42,8 +42,8 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Sidebar admin 3 grup (Operasional / Insight / Setup) + CoreUI `cil-*` icons.
 - [x] **DONE** — Visi brand orange (`#f97316` / `#fb923c` dark) override CoreUI primary (`assets/css/visi.css`).
 - [x] **DONE** — Seat map theme-aware (CSS vars per `[data-coreui-theme]`).
-- [ ] **TODO** — Tenant branding actually applied: ambil `tenants.branding_json.primary_color` → inject ke CSS vars per-tenant (sekarang Visi orange dipakai global; settings page punya color picker tapi tidak nyimpen / apply).
-- [ ] **TODO** — Logo tenant di header public & admin (sekarang teks "Visi Admin"). Field `branding.logo_url` ada di schema.
+- [x] **DONE** — Tenant branding actually applied: `src/Branding.php` baca `tenants.branding.primary_color` → inject `<style>` override `--cui-primary` (+ turunan hover/active & seat-selected) di layout admin & publik. Settings color picker nyimpen & ke-apply.
+- [x] **DONE** — Logo tenant di header public & admin. Upload di Settings (`handleLogoUpload`, validasi MIME + maks 2MB, simpan ke `/uploads/branding/`), tampil di sidebar admin & header publik. Fallback ke nama/inisial kalau belum ada logo.
 
 ### 3. Admin Panel
 
