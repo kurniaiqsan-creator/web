@@ -28,7 +28,10 @@
                     <button type="submit" class="btn btn-primary w-100">Masuk</button>
                 </form>
 
-                <p class="text-center small text-medium-emphasis mt-3 mb-0">
+                <p class="text-center small mt-3 mb-0">
+                    <a href="<?= base_url('/' . $tenant['slug'] . '/lupa-password') ?>">Lupa password?</a>
+                </p>
+                <p class="text-center small text-medium-emphasis mt-1 mb-0">
                     Belum punya akun?
                     <a href="<?= base_url('/' . $tenant['slug'] . '/daftar' . (!empty($next) ? '?next=' . urlencode($next) : '')) ?>">Daftar di sini</a>
                 </p>

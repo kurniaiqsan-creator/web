@@ -180,6 +180,184 @@ class CustomerController
         Router::redirect('/' . $tenantSlug);
     }
 
+    // ===== LUPA / RESET PASSWORD =====
+
+    public function forgotForm(string $tenantSlug): string
+    {
+        $tenant = $this->tenant($tenantSlug);
+        if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
+
+        return View::render('auth/customer-forgot', [
+            'title'  => 'Lupa Password — ' . $tenant['name'],
+            'tenant' => $tenant,
+        ]);
+    }
+
+    public function forgot(string $tenantSlug): string
+    {
+        $tenant = $this->tenant($tenantSlug);
+        if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
+
+        $email = trim((string)($_POST['email'] ?? ''));
+
+        // Selalu tampilkan pesan sukses yang sama (cegah enumerasi email).
+        $genericDone = fn() => View::render('auth/customer-forgot', [
+            'title'  => 'Lupa Password — ' . $tenant['name'],
+            'tenant' => $tenant,
+            'done'   => true,
+        ]);
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $genericDone();
+        }
+
+        $user = Database::fetch(
+            "SELECT id, name, email FROM users WHERE email = ? AND tenant_id = ? AND role = 'customer'",
+            [$email, $tenant['id']]
+        );
+
+        if ($user) {
+            // Buat token: kirim plaintext ke email, simpan hash-nya saja.
+            $plain = bin2hex(random_bytes(32));
+            $hash = hash('sha256', $plain);
+            $expires = date('Y-m-d H:i:s', time() + 3600); // 1 jam
+
+            // Invalidasi token lama yang belum dipakai untuk user ini.
+            Database::query(
+                'UPDATE password_resets SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL',
+                [(int)$user['id']]
+            );
+            Database::insert('password_resets', [
+                'user_id'    => (int)$user['id'],
+                'token_hash' => $hash,
+                'expires_at' => $expires,
+            ]);
+
+            $resetUrl = $this->absoluteUrl('/' . $tenant['slug'] . '/reset-password/' . $plain);
+            $this->sendResetEmail($tenant, $user, $resetUrl);
+        }
+
+        return $genericDone();
+    }
+
+    public function resetForm(string $tenantSlug, string $token): string
+    {
+        $tenant = $this->tenant($tenantSlug);
+        if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
+
+        $valid = $this->findValidReset($token, (int)$tenant['id']) !== null;
+
+        return View::render('auth/customer-reset', [
+            'title'   => 'Reset Password — ' . $tenant['name'],
+            'tenant'  => $tenant,
+            'token'   => $token,
+            'invalid' => !$valid,
+        ]);
+    }
+
+    public function reset(string $tenantSlug, string $token): string
+    {
+        $tenant = $this->tenant($tenantSlug);
+        if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
+
+        $reset = $this->findValidReset($token, (int)$tenant['id']);
+        if (!$reset) {
+            return View::render('auth/customer-reset', [
+                'title'   => 'Reset Password — ' . $tenant['name'],
+                'tenant'  => $tenant,
+                'token'   => $token,
+                'invalid' => true,
+            ]);
+        }
+
+        $password = (string)($_POST['password'] ?? '');
+        $confirm  = (string)($_POST['password_confirm'] ?? '');
+
+        $renderErr = fn(string $msg) => View::render('auth/customer-reset', [
+            'title'   => 'Reset Password — ' . $tenant['name'],
+            'tenant'  => $tenant,
+            'token'   => $token,
+            'error'   => $msg,
+        ]);
+
+        if (strlen($password) < 6) {
+            return $renderErr('Password minimal 6 karakter.');
+        }
+        if ($password !== $confirm) {
+            return $renderErr('Konfirmasi password tidak cocok.');
+        }
+
+        Database::update('users',
+            ['password_hash' => password_hash($password, PASSWORD_DEFAULT)],
+            'id = ?', [(int)$reset['user_id']]
+        );
+        Database::update('password_resets',
+            ['used_at' => date('Y-m-d H:i:s')],
+            'id = ?', [(int)$reset['id']]
+        );
+
+        Session::flash('Password berhasil diubah. Silakan masuk dengan password baru.');
+        Router::redirect('/' . $tenant['slug'] . '/masuk');
+    }
+
+    /**
+     * Cari token reset yang valid (belum dipakai, belum kedaluwarsa) milik tenant ini.
+     * @return array<string,mixed>|null
+     */
+    private function findValidReset(string $token, int $tenantId): ?array
+    {
+        $hash = hash('sha256', $token);
+        return Database::fetch(
+            "SELECT pr.* FROM password_resets pr
+             JOIN users u ON u.id = pr.user_id
+             WHERE pr.token_hash = ? AND pr.used_at IS NULL AND pr.expires_at > NOW()
+               AND u.tenant_id = ? AND u.role = 'customer'
+             LIMIT 1",
+            [$hash, $tenantId]
+        );
+    }
+
+    /** Kirim email berisi link reset (pakai Mailer SMTP tenant). */
+    private function sendResetEmail(array $tenant, array $user, string $resetUrl): void
+    {
+        $settings = json_decode($tenant['settings'] ?? '{}', true);
+        $settings = is_array($settings) ? $settings : [];
+
+        $mailer = Mailer::fromConfig($settings);
+        if ($mailer === null) {
+            error_log('Password reset: SMTP belum dikonfigurasi untuk tenant ' . $tenant['id']);
+            return;
+        }
+
+        $name = htmlspecialchars((string)$user['name'], ENT_QUOTES, 'UTF-8');
+        $url = htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8');
+        $tenantName = htmlspecialchars((string)$tenant['name'], ENT_QUOTES, 'UTF-8');
+
+        $html = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f5f5f5;padding:24px">'
+            . '<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;border:1px solid #eee">'
+            . '<h1 style="font-size:18px;margin:0 0 12px">Reset Password</h1>'
+            . '<p style="color:#555">Halo ' . $name . ', kami menerima permintaan reset password untuk akun kamu di ' . $tenantName . '.</p>'
+            . '<p style="margin:20px 0"><a href="' . $url . '" style="background:#f97316;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block">Reset Password</a></p>'
+            . '<p style="color:#888;font-size:13px">Atau buka link ini: <br><span style="word-break:break-all">' . $url . '</span></p>'
+            . '<p style="color:#888;font-size:13px">Link berlaku 1 jam. Abaikan email ini jika kamu tidak meminta reset.</p>'
+            . '</div></body></html>';
+
+        $mailer->send((string)$user['email'], (string)$user['name'], 'Reset Password — ' . (string)$tenant['name'], $html);
+    }
+
+    /** Bentuk URL absolut untuk link email. */
+    private function absoluteUrl(string $path): string
+    {
+        $base = function_exists('base_url') ? base_url($path) : $path;
+        if (!preg_match('#^https?://#', $base)) {
+            $appUrl = rtrim((string)(getenv('APP_URL') ?: ''), '/');
+            if ($appUrl !== '') {
+                $base = $appUrl . '/' . ltrim($path, '/');
+            }
+        }
+        return $base;
+    }
+
     // ===== AKUN / TIKET SAYA =====
 
     public function account(string $tenantSlug): string

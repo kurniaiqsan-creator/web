@@ -273,8 +273,7 @@ CREATE TABLE refunds (
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ===== NOTIFICATIONS OUTBOX (email & WhatsApp) =====
-CREATE TABLE notifications_outbox (
+-- ===== NOTIFICATIONS OUTBOX (email & WhatsApp) =====CREATE TABLE notifications_outbox (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     tenant_id BIGINT NULL,
     order_id BIGINT NULL,
@@ -293,6 +292,19 @@ CREATE TABLE notifications_outbox (
     INDEX idx_tenant_channel (tenant_id, channel),
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ===== PASSWORD RESETS =====
+CREATE TABLE password_resets (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    token_hash CHAR(64) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_token (token_hash),
+    INDEX idx_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ===== SEED DATA (DEMO) =====

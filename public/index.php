@@ -194,6 +194,10 @@ $router->get('/{tenantSlug}/masuk', [CustomerController::class, 'loginForm']);
 $router->post('/{tenantSlug}/masuk', [CustomerController::class, 'login']);
 $router->get('/{tenantSlug}/daftar', [CustomerController::class, 'registerForm']);
 $router->post('/{tenantSlug}/daftar', [CustomerController::class, 'register']);
+$router->get('/{tenantSlug}/lupa-password', [CustomerController::class, 'forgotForm']);
+$router->post('/{tenantSlug}/lupa-password', [CustomerController::class, 'forgot']);
+$router->get('/{tenantSlug}/reset-password/{token}', [CustomerController::class, 'resetForm']);
+$router->post('/{tenantSlug}/reset-password/{token}', [CustomerController::class, 'reset']);
 $router->get('/{tenantSlug}/keluar', [CustomerController::class, 'logout']);
 $router->get('/{tenantSlug}/akun', [CustomerController::class, 'account']);
 
