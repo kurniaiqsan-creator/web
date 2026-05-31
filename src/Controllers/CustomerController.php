@@ -180,6 +180,66 @@ class CustomerController
         Router::redirect('/' . $tenantSlug);
     }
 
+    /**
+     * POST /{slug}/akun/profil — update nama/telepon + ganti password opsional.
+     */
+    public function profileUpdate(string $tenantSlug): string
+    {
+        $tenant = $this->tenant($tenantSlug);
+        if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
+
+        if (empty($_SESSION['customer_id']) || (int)$_SESSION['customer_tenant_id'] !== (int)$tenant['id']) {
+            Router::redirect('/' . $tenant['slug'] . '/masuk?next=' . urlencode('/' . $tenant['slug'] . '/akun'));
+        }
+
+        $customerId = (int)$_SESSION['customer_id'];
+        $user = Database::fetch('SELECT * FROM users WHERE id = ?', [$customerId]);
+        if (!$user) {
+            Router::redirect('/' . $tenant['slug'] . '/akun');
+        }
+
+        $name  = trim((string)($_POST['name'] ?? ''));
+        $phone = trim((string)($_POST['phone'] ?? ''));
+        $currentPw = (string)($_POST['current_password'] ?? '');
+        $newPw     = (string)($_POST['new_password'] ?? '');
+        $confirmPw = (string)($_POST['new_password_confirm'] ?? '');
+
+        if ($name === '') {
+            Session::flash('Nama wajib diisi', 'error');
+            Router::redirect('/' . $tenant['slug'] . '/akun');
+        }
+
+        $data = [
+            'name'  => $name,
+            'phone' => $phone !== '' ? $phone : null,
+        ];
+
+        // Ganti password (opsional): hanya kalau salah satu field password diisi.
+        if ($newPw !== '' || $confirmPw !== '' || $currentPw !== '') {
+            if (!password_verify($currentPw, $user['password_hash'])) {
+                Session::flash('Password saat ini salah', 'error');
+                Router::redirect('/' . $tenant['slug'] . '/akun');
+            }
+            if (strlen($newPw) < 6) {
+                Session::flash('Password baru minimal 6 karakter', 'error');
+                Router::redirect('/' . $tenant['slug'] . '/akun');
+            }
+            if ($newPw !== $confirmPw) {
+                Session::flash('Konfirmasi password baru tidak cocok', 'error');
+                Router::redirect('/' . $tenant['slug'] . '/akun');
+            }
+            $data['password_hash'] = password_hash($newPw, PASSWORD_DEFAULT);
+        }
+
+        Database::update('users', $data, 'id = ?', [$customerId]);
+
+        // Sinkronkan nama di session supaya header langsung update.
+        $_SESSION['customer_name'] = $name;
+
+        Session::flash('Profil berhasil diperbarui');
+        Router::redirect('/' . $tenant['slug'] . '/akun');
+    }
+
     // ===== LUPA / RESET PASSWORD =====
 
     public function forgotForm(string $tenantSlug): string

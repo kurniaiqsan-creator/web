@@ -201,6 +201,7 @@ $router->get('/{tenantSlug}/reset-password/{token}', [CustomerController::class,
 $router->post('/{tenantSlug}/reset-password/{token}', [CustomerController::class, 'reset']);
 $router->get('/{tenantSlug}/keluar', [CustomerController::class, 'logout']);
 $router->get('/{tenantSlug}/akun', [CustomerController::class, 'account']);
+$router->post('/{tenantSlug}/akun/profil', [CustomerController::class, 'profileUpdate']);
 
 // ===== TENANT ROUTES (catch-all, harus TERAKHIR) =====
 $router->get('/{tenantSlug}', function (string $tenantSlug) {

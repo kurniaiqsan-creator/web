@@ -28,6 +28,58 @@ $statusMap = [
         </div>
     </div>
 
+    <!-- Edit Profil -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="h6 fw-semibold mb-0"><i class="cil-user me-2"></i>Profil Saya</h2>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-coreui-toggle="collapse" data-coreui-target="#profileEdit" aria-expanded="false">
+                <i class="cil-pencil me-1"></i>Edit
+            </button>
+        </div>
+        <div class="collapse" id="profileEdit">
+            <div class="card-body">
+                <form method="post" action="<?= base_url('/' . $tenant['slug'] . '/akun/profil') ?>">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nama</label>
+                            <input type="text" name="name" class="form-control" value="<?= View::e($customer['name']) ?>" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" value="<?= View::e($customer['email']) ?>" disabled>
+                            <div class="form-text">Email tidak bisa diubah.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Telepon</label>
+                            <input type="tel" name="phone" class="form-control" value="<?= View::e($customer['phone'] ?? '') ?>" placeholder="08xxxxxxxxxx">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <p class="small text-medium-emphasis mb-3">Ganti password (kosongkan jika tidak ingin mengubah).</p>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Password Saat Ini</label>
+                            <input type="password" name="current_password" class="form-control" autocomplete="current-password">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Password Baru</label>
+                            <input type="password" name="new_password" class="form-control" autocomplete="new-password">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Konfirmasi</label>
+                            <input type="password" name="new_password_confirm" class="form-control" autocomplete="new-password">
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="cil-save me-1"></i>Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <h2 class="h6 fw-semibold mb-3">Riwayat Pesanan (<?= count($orders) ?>)</h2>
 
     <?php if (empty($orders)): ?>
