@@ -156,10 +156,11 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 ### 5. Notifikasi
 
-- [ ] **TODO** — Email transaksional (order paid, e-ticket) via SMTP (Gmail App Password). **BLOCKED** sampai kredensial SMTP tersedia. PRD spec di section 5.
-- [ ] **TODO** — WhatsApp via Fonnte (`FONNTE_TOKEN`). **BLOCKED** sampai token Fonnte tersedia.
+- [x] **DONE** — Email transaksional (order paid, e-ticket) via SMTP (PHPMailer, Gmail App Password). Config per-tenant di Settings (`mail_*`) atau `.env`. Kirim otomatis saat order lunas (`Notifier::sendOrderPaid`). E-ticket HTML + QR inline. *Perlu isi kredensial SMTP untuk aktif.*
+- [x] **DONE** — WhatsApp via Fonnte (`src/Fonnte.php`, `FONNTE_TOKEN`). Kirim e-ticket + link saat order lunas. Token per-tenant di Settings atau `.env`. *Perlu isi token Fonnte untuk aktif.*
 - [ ] **TODO** — Push (FCM) — PRD optional.
-- [ ] **TODO** — Tabel `notifications_outbox` (queue ringan, retry, logging). Belum ada di schema.
+- [x] **DONE** — Tabel `notifications_outbox` (logging + status pending/sent/failed + last_error, idempotensi per channel). Migration 003.
+- [ ] **TODO** — Retry worker untuk notif `failed` (sekarang sekali kirim; baris `failed` tercatat untuk retry manual/cron nanti).
 
 ### 6. Sistem Promosi
 
