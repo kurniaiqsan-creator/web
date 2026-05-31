@@ -111,7 +111,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 - [x] **DONE** — `/admin/ticket-categories`: list inline-edit (form per-row via HTML5 `form=""` attribute), create modal, delete (guard: tolak hapus jika ada `seats.category_id = ?`).
 - [x] **DONE** — Sidebar entry baru di group **Setup** dengan icon `cil-tag`.
-- [ ] **TODO** — Inline CRUD dari dalam event editor (currently link out ke `/admin/ticket-categories`).
+- [x] **DONE** — Inline CRUD dari dalam event editor: quick-create kategori via AJAX (`POST /admin/ticket-categories/quick`) tanpa pindah halaman; kategori baru langsung muncul & bisa dipakai untuk kuota GA. Edit/hapus tetap di `/admin/ticket-categories`.
 
 ### 4. Customer Flow (Public)
 
