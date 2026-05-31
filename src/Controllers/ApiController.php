@@ -139,24 +139,96 @@ class ApiController
     public function createOrder(): string
     {
         $data = $this->input();
-        $tenantId = $data['tenant_id'] ?? ($_SESSION['tenant_id'] ?? 0);
+        $tenantId = (int)($data['tenant_id'] ?? ($_SESSION['tenant_id'] ?? 0));
         $holdId = $data['seat_hold_id'] ?? null;
         $items = $data['items'] ?? [];
         $customer = $data['customer'] ?? [];
         $currency = $data['currency'] ?? 'idr';
-        $eventId = $data['event_id'] ?? ($items[0]['event_id'] ?? null);
-        $discountCents = max(0, (int)($data['discount_cents'] ?? 0));
+        $eventId = (int)($data['event_id'] ?? ($items[0]['event_id'] ?? 0));
+        $promoCode = isset($data['promo_code']) ? strtoupper(trim((string)$data['promo_code'])) : '';
 
-        if (empty($items)) {
-            return $this->error('VALIDATION', 'Items wajib diisi');
+        if (empty($items) || $eventId <= 0) {
+            return $this->error('VALIDATION', 'Items dan event_id wajib diisi');
         }
-
-        $subtotalCents = array_sum(array_column($items, 'price_cents'));
-        $totalCents = max(0, $subtotalCents - $discountCents);
-        $orderCode = 'ORD-' . str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         Database::beginTransaction();
         try {
+            // Self-healing inventory: lepaskan kursi yang dikunci order pending basi
+            // (mis. user kabur tanpa bayar) sebelum cek ketersediaan.
+            $this->releaseStalePendingSeats($eventId);
+
+            // Harga otoritatif diambil dari DB, BUKAN dari client (cegah manipulasi harga).
+            // Sekaligus enforce inventory: kursi harus available, lock baris (FOR UPDATE).
+            $resolvedItems = [];
+            $subtotalCents = 0;
+            $seatLabels = [];
+
+            foreach ($items as $item) {
+                $seatLabel = isset($item['seat_label']) ? (string)$item['seat_label'] : '';
+
+                if ($seatLabel !== '') {
+                    $seat = Database::fetch(
+                        "SELECT id, price_cents, status, category_id FROM seats
+                         WHERE event_id = ? AND seat_label = ? FOR UPDATE",
+                        [$eventId, $seatLabel]
+                    );
+                    if (!$seat) {
+                        Database::rollback();
+                        return $this->error('SEAT_NOT_FOUND', "Kursi {$seatLabel} tidak ditemukan", 422);
+                    }
+                    if ($seat['status'] !== 'available') {
+                        Database::rollback();
+                        return $this->json([
+                            'error' => [
+                                'code'    => 'SEAT_UNAVAILABLE',
+                                'message' => "Kursi {$seatLabel} sudah tidak tersedia",
+                                'details' => ['seat_label' => $seatLabel, 'status' => $seat['status']],
+                            ]
+                        ], 409);
+                    }
+                    $price = (int)$seat['price_cents'];
+                    $catId = $seat['category_id'] !== null ? (int)$seat['category_id'] : null;
+                    $seatLabels[] = $seatLabel;
+                } else {
+                    // General admission: harga dari kategori.
+                    $catId = isset($item['category_id']) ? (int)$item['category_id'] : null;
+                    $price = 0;
+                    if ($catId !== null) {
+                        $cat = Database::fetch(
+                            'SELECT price_cents FROM ticket_categories WHERE id = ? AND tenant_id = ?',
+                            [$catId, $tenantId]
+                        );
+                        if (!$cat) {
+                            Database::rollback();
+                            return $this->error('CATEGORY_NOT_FOUND', 'Kategori tiket tidak ditemukan', 422);
+                        }
+                        $price = (int)$cat['price_cents'];
+                    }
+                }
+
+                $resolvedItems[] = [
+                    'event_id'    => $eventId,
+                    'seat_label'  => $seatLabel !== '' ? $seatLabel : null,
+                    'category_id' => $catId,
+                    'price_cents' => $price,
+                ];
+                $subtotalCents += $price;
+            }
+
+            // Evaluasi promo server-side (abaikan discount_cents dari client).
+            $discountCents = 0;
+            $promoApplied = null;
+            if ($promoCode !== '') {
+                $promo = $this->resolvePromo($promoCode, $tenantId, $eventId);
+                if ($promo !== null) {
+                    $discountCents = $this->computeDiscount($promo, $subtotalCents);
+                    $promoApplied = $promo;
+                }
+            }
+
+            $totalCents = max(0, $subtotalCents - $discountCents);
+            $orderCode = 'ORD-' . str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
             $orderId = Database::insert('orders', [
                 'order_uid'         => 'order_' . bin2hex(random_bytes(8)),
                 'tenant_id'         => $tenantId,
@@ -172,14 +244,32 @@ class ApiController
                 'created_at'        => date('Y-m-d H:i:s'),
             ]);
 
-            foreach ($items as $item) {
+            foreach ($resolvedItems as $item) {
                 Database::insert('order_items', [
                     'order_id'     => $orderId,
-                    'event_id'     => $item['event_id'] ?? $eventId,
-                    'seat_label'   => $item['seat_label'] ?? null,
-                    'category_id'  => $item['category_id'] ?? null,
-                    'price_cents'  => $item['price_cents'] ?? 0,
+                    'event_id'     => $item['event_id'],
+                    'seat_label'   => $item['seat_label'],
+                    'category_id'  => $item['category_id'],
+                    'price_cents'  => $item['price_cents'],
                 ]);
+            }
+
+            // Blokir kursi yang dipesan supaya tidak diambil order lain sebelum bayar.
+            if (!empty($seatLabels)) {
+                $ph = implode(',', array_fill(0, count($seatLabels), '?'));
+                Database::query(
+                    "UPDATE seats SET status = 'blocked'
+                     WHERE event_id = ? AND seat_label IN ({$ph}) AND status = 'available'",
+                    array_merge([$eventId], $seatLabels)
+                );
+            }
+
+            // Track penggunaan promo.
+            if ($promoApplied !== null && $discountCents > 0) {
+                Database::query(
+                    'UPDATE promotions SET used_count = used_count + 1 WHERE id = ?',
+                    [(int)$promoApplied['id']]
+                );
             }
 
             Database::commit();
@@ -187,6 +277,8 @@ class ApiController
             return $this->json([
                 'order_id'        => (string)$orderId,
                 'order_code'      => $orderCode,
+                'subtotal_cents'  => $subtotalCents,
+                'discount_cents'  => $discountCents,
                 'total_amount_cents' => $totalCents,
                 'currency'        => $currency,
                 'status'          => 'pending',
@@ -200,6 +292,80 @@ class ApiController
             Database::rollback();
             return $this->error('CREATE_FAILED', $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Cari promo valid (aktif, dalam periode, belum habis kuota, applicable ke event).
+     * Return row promo atau null.
+     */
+    private function resolvePromo(string $code, int $tenantId, int $eventId): ?array
+    {
+        $promo = Database::fetch(
+            "SELECT * FROM promotions
+             WHERE code = ? AND tenant_id = ?
+               AND NOW() BETWEEN valid_from AND valid_to
+               AND (usage_limit = 0 OR used_count < usage_limit)",
+            [$code, $tenantId]
+        );
+        if (!$promo) {
+            return null;
+        }
+
+        // Cek applicable_event_ids (kalau di-set, event harus termasuk).
+        $applicable = json_decode($promo['applicable_event_ids'] ?? 'null', true);
+        if (is_array($applicable) && !empty($applicable)) {
+            $applicableInts = array_map('intval', $applicable);
+            if (!in_array($eventId, $applicableInts, true)) {
+                return null;
+            }
+        }
+
+        return $promo;
+    }
+
+    /** Hitung diskon (cents) dari sebuah promo terhadap subtotal. */
+    private function computeDiscount(array $promo, int $subtotalCents): int
+    {
+        $discount = ($promo['type'] === 'percentage')
+            ? (int)round($subtotalCents * (float)$promo['value'] / 100)
+            : (int)round((float)$promo['value']); // 'fixed' = nilai rupiah langsung
+        return max(0, min($discount, $subtotalCents));
+    }
+
+    /**
+     * Lepaskan kursi yang masih 'blocked' karena order pending yang sudah kedaluwarsa
+     * (lebih tua dari TTL), lalu set order tsb 'cancelled'. Mencegah kursi terkunci
+     * selamanya tanpa cron. TTL default = seat_hold_ttl di config app (fallback 300s).
+     */
+    private function releaseStalePendingSeats(int $eventId): void
+    {
+        $ttl = 300;
+        $cfgPath = BASE_PATH . '/config/app.php';
+        if (is_file($cfgPath)) {
+            $cfg = require $cfgPath;
+            $ttl = (int)($cfg['seat_hold_ttl'] ?? 300);
+        }
+
+        // Kembalikan kursi dari order pending basi ke available.
+        Database::query(
+            "UPDATE seats s
+             JOIN order_items oi ON oi.event_id = s.event_id AND oi.seat_label = s.seat_label
+             JOIN orders o ON o.id = oi.order_id
+             SET s.status = 'available'
+             WHERE s.event_id = ?
+               AND s.status = 'blocked'
+               AND o.status = 'pending'
+               AND o.created_at < (NOW() - INTERVAL ? SECOND)",
+            [$eventId, $ttl]
+        );
+
+        // Batalkan order pending basi untuk event ini.
+        Database::query(
+            "UPDATE orders SET status = 'cancelled'
+             WHERE event_id = ? AND status = 'pending'
+               AND created_at < (NOW() - INTERVAL ? SECOND)",
+            [$eventId, $ttl]
+        );
     }
 
     public function createPaymentIntent(): string
@@ -217,23 +383,35 @@ class ApiController
         $data = $this->input();
         $codes = $data['promo_codes'] ?? [];
         $cart = $data['cart'] ?? [];
+        $tenantId = (int)($data['tenant_id'] ?? ($_SESSION['tenant_id'] ?? 0));
+        $eventId = (int)($data['event_id'] ?? 0);
 
         $totalDiscount = 0;
         $applied = [];
         $subtotal = array_sum(array_column($cart, 'price_cents'));
 
         foreach ($codes as $code) {
-            $promo = Database::fetch(
-                "SELECT * FROM promotions WHERE code = ? AND NOW() BETWEEN valid_from AND valid_to AND used_count < usage_limit",
-                [strtoupper($code)]
-            );
+            $code = strtoupper(trim((string)$code));
+            if ($code === '') {
+                continue;
+            }
+
+            // Kalau tenant diketahui, pakai resolver yang event-aware & tenant-scoped.
+            // Fallback ke lookup global (kompat lama) kalau tenant tidak dikirim.
+            $promo = $tenantId > 0
+                ? $this->resolvePromo($code, $tenantId, $eventId)
+                : Database::fetch(
+                    "SELECT * FROM promotions WHERE code = ?
+                       AND NOW() BETWEEN valid_from AND valid_to
+                       AND (usage_limit = 0 OR used_count < usage_limit)",
+                    [$code]
+                );
 
             if ($promo) {
-                $discount = $promo['type'] === 'percentage'
-                    ? (int)round($subtotal * $promo['value'] / 100)
-                    : (int)($promo['value'] * 100);
-                $discount = min($discount, $subtotal);
-
+                $discount = $this->computeDiscount($promo, $subtotal);
+                if ($discount <= 0) {
+                    continue;
+                }
                 $totalDiscount += $discount;
                 $applied[] = [
                     'code'           => $promo['code'],
@@ -243,6 +421,8 @@ class ApiController
                 ];
             }
         }
+
+        $totalDiscount = min($totalDiscount, $subtotal);
 
         return $this->json([
             'applied_promos'       => $applied,

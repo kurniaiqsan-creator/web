@@ -180,6 +180,8 @@ function checkout() {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
+                        tenant_id: this.tenantId,
+                        event_id: this.eventId,
                         promo_codes: [this.promoCode.toUpperCase()],
                         cart: this.seats.map(s => ({seat_label: s.label, price_cents: s.price})),
                     })
