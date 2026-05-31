@@ -15,7 +15,10 @@ class AuthController
         $email = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
 
-        $user = Database::fetch('SELECT * FROM users WHERE email = ?', [$email]);
+        $user = Database::fetch(
+            "SELECT * FROM users WHERE email = ? AND role IN ('tenant_admin','staff','system_admin')",
+            [$email]
+        );
 
         if ($user && password_verify($password, $user['password_hash'])) {
             $_SESSION['user_id'] = $user['id'];

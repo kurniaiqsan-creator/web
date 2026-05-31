@@ -80,8 +80,18 @@ class PublicController
         );
         if (!$tenant || !$event) { http_response_code(404); return Router::renderError(404, 'Event tidak ditemukan'); }
 
+        // Prefill data pemesan bila customer sedang login pada tenant ini.
+        $customer = null;
+        if (!empty($_SESSION['customer_id']) && (int)($_SESSION['customer_tenant_id'] ?? 0) === (int)$tenant['id']) {
+            $customer = Database::fetch(
+                'SELECT name, email, phone FROM users WHERE id = ?',
+                [(int)$_SESSION['customer_id']]
+            );
+        }
+
         return View::render('public/checkout', [
             'title' => 'Checkout — ' . $event['title'], 'tenant' => $tenant, 'event' => $event,
+            'customer' => $customer,
         ]);
     }
 
