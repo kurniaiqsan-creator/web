@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= View::e($title ?? 'Visi') ?> — Visi</title>
+    <title><?= View::e($title ?? 'Visi') ?> — <?= View::e(Branding::siteTitle($tenant ?? null)) ?></title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.4.1/dist/css/coreui.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@3.1.0/css/all.min.css">
@@ -53,7 +53,7 @@
                     <a href="<?= base_url('/' . $tenant['slug'] . '/masuk') ?>" class="btn btn-outline-primary btn-sm">Masuk</a>
                     <a href="<?= base_url('/' . $tenant['slug'] . '/daftar') ?>" class="btn btn-primary btn-sm">Daftar</a>
                 <?php else: ?>
-                    <a href="<?= base_url('/login') ?>" class="btn btn-primary btn-sm">Masuk Admin</a>
+                    <a href="<?= base_url('/login') ?>" class="btn btn-primary btn-sm">Masuk</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -65,7 +65,7 @@
 
     <footer class="border-top bg-body py-3 mt-4">
         <div class="container-lg text-center small text-medium-emphasis">
-            &copy; <?= date('Y') ?> Visi — Platform Tiket
+            &copy; <?= date('Y') ?> <?= View::e(Branding::footerText($tenant ?? null)) ?>
         </div>
     </footer>
 

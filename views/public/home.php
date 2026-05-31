@@ -12,7 +12,7 @@
         </p>
         <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mt-4">
             <a href="<?= base_url('/acoustic-nights') ?>" class="btn btn-primary btn-lg px-4">Lihat Event Live</a>
-            <a href="<?= base_url('/login') ?>" class="btn btn-outline-secondary btn-lg px-4">Masuk Admin</a>
+            <a href="<?= base_url('/login') ?>" class="btn btn-outline-secondary btn-lg px-4">Masuk</a>
         </div>
     </div>
 </section>

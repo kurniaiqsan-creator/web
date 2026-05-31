@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= View::e($title ?? 'Admin') ?> — Visi Admin</title>
+    <title><?= View::e($title ?? 'Admin') ?> — <?= View::e(Branding::siteTitle()) ?> Admin</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.4.1/dist/css/coreui.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@3.1.0/css/all.min.css">
@@ -179,7 +179,7 @@ $isActive = function (string $href) use ($currentPath): bool {
 
     <footer class="footer px-4 border-top mt-4">
         <div class="container-lg py-3 d-flex flex-wrap justify-content-between align-items-center small text-medium-emphasis">
-            <span>&copy; <?= date('Y') ?> Visi — Platform Tiket</span>
+            <span>&copy; <?= date('Y') ?> <?= View::e(Branding::footerText()) ?></span>
             <span>Built with <a href="https://coreui.io/" class="link-secondary text-decoration-none">CoreUI</a></span>
         </div>
     </footer>

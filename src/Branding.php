@@ -29,6 +29,30 @@ class Branding
         return $logo;
     }
 
+    /**
+     * Judul situs (suffix tab browser & brand fallback).
+     * Dari `tenants.branding.site_title`, default 'Visi'.
+     * Bila $tenant null, fallback ke tenant pada session (admin area).
+     */
+    public static function siteTitle(?array $tenant = null): string
+    {
+        $branding = self::resolveBranding($tenant);
+        $val = isset($branding['site_title']) ? trim((string)$branding['site_title']) : '';
+        return $val !== '' ? $val : 'Visi';
+    }
+
+    /**
+     * Teks footer (setelah "© TAHUN").
+     * Dari `tenants.branding.footer_text`, default 'Visi — Platform Tiket'.
+     * Bila $tenant null, fallback ke tenant pada session (admin area).
+     */
+    public static function footerText(?array $tenant = null): string
+    {
+        $branding = self::resolveBranding($tenant);
+        $val = isset($branding['footer_text']) ? trim((string)$branding['footer_text']) : '';
+        return $val !== '' ? $val : 'Visi — Platform Tiket';
+    }
+
     /** Nama tenant aktif dari session (admin area), atau '' jika tidak ada. */
     public static function tenantName(): string
     {

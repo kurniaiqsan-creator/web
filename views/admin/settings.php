@@ -21,6 +21,12 @@ $mask = fn(string $val): string => $val === '' ? '' : '••••••••�
                 <div class="card-body">
                     <div class="mb-3"><label class="form-label">Nama Tenant</label>
                         <input class="form-control" name="name" value="<?= View::e($tenant['name'] ?? '') ?>"></div>
+                    <div class="mb-3"><label class="form-label">Judul Situs</label>
+                        <input class="form-control" name="site_title" value="<?= View::e($branding['site_title'] ?? '') ?>" placeholder="Visi">
+                        <div class="form-text">Muncul di judul tab browser, mis. "Beranda — <em>Judul Situs</em>".</div></div>
+                    <div class="mb-3"><label class="form-label">Teks Footer</label>
+                        <input class="form-control" name="footer_text" value="<?= View::e($branding['footer_text'] ?? '') ?>" placeholder="Visi — Platform Tiket">
+                        <div class="form-text">Tampil di footer setelah "© <?= date('Y') ?>".</div></div>
                     <div class="mb-3">
                         <label class="form-label">Logo</label>
                         <?php if (!empty($branding['logo_url'])): ?>
