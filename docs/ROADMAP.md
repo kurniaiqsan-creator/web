@@ -28,6 +28,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Seed demo: tenant `acoustic-nights`, admin `admin@acousticnights.com` / `password`, 2 event sample (`database/seed.sql`).
 - [x] **DONE** — Auth + session (login/logout) + middleware `authMiddleware`, `adminMiddleware`, `tenantMiddleware` (`src/Controllers/AuthController.php`, `public/index.php`).
 - [x] **DONE** — Onboarding publik di-disable → redirect `/onboarding` ke `/login` (Path A).
+- [x] **DONE** — Flash message helper (`src/Session.php` `flash()` / `consumeFlash()`), dipakai oleh semua admin form save.
 - [ ] **TODO** — `.env` loader resmi (sekarang baca via `getenv()` langsung). Goal: file `.env` di-load otomatis untuk `DB_*`, `APP_BASE_URL`, key PG, SMTP, Twilio.
 - [ ] **TODO** — Migrasi tooling (sekarang ada `database/migrations/001_add_customer_to_orders.sql` tapi belum ada runner). Goal: `php migrate.php up` atau sejenis.
 - [ ] **TODO** — Tooling lint/test (PHPStan/Psalm + PHPUnit). Sekarang nol.
@@ -55,14 +56,15 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 #### 3.2 Event Management
 
 - [x] **DONE** — List events (`/admin/events` → `views/admin/events.php`).
-- [~] **WIRED → MOCK** — Editor event (`/admin/events/create`, `/admin/events/{id}`). UI Alpine.js dengan form lengkap (judul, venue, tipe seat/GA, jam, deskripsi, kategori tiket, seat map), **tapi tidak ada submit handler ke backend**. Lihat <ref_snippet file="/home/ubuntu/repos/existing-web/views/admin/event-editor.php" lines="40-80" />.
-- [ ] **TODO** — `AdminController::eventCreate()` + route `POST /admin/events` yang nyimpen ke `events`, `venues`, `seat_maps`, `seats`, `ticket_categories`.
-- [ ] **TODO** — Tombol "Publish" / "Cancel" event (ubah `events.status`).
-- [ ] **TODO** — Soft-delete event (`events.deleted_at` perlu ditambah ke schema).
+- [x] **DONE** — Editor event (`/admin/events/create`, `/admin/events/{id}`) jadi real form, submit ke `POST /admin/events[/{id}]`. Simpan `events.{title,description,venue_id,start_time,end_time,status,settings}` + replace seat map (kecuali ada seat yang sudah sold di mode edit → safeguard, layout tidak dirombak).
+- [x] **DONE** — Tombol "Simpan Draft" / "Publish" set `status='draft'` / `'published'`.
+- [x] **DONE** — Cancel event via `POST /admin/events/{id}/delete` → set `status='cancelled'`.
+- [ ] **TODO** — Editor tab "Tiket & Harga" untuk CRUD `ticket_categories` (sekarang baca-aja).
+- [ ] **TODO** — Soft-delete event (kolom `deleted_at` perlu ditambah ke schema). Saat ini hanya status='cancelled'.
 
 #### 3.3 Venue Management
 
-- [ ] **TODO** — Route `/admin/venues` (list, create, edit). Saat ini venue hanya bisa dipilih saat bikin event, tidak ada CRUD terpisah.
+- [x] **DONE** — Route `/admin/venues` (list dengan count event terkait), `/admin/venues/create`, `/admin/venues/{id}` (form edit), `POST /admin/venues/{id}/delete` (dengan guard: tidak bisa hapus venue yang masih dipakai event).
 
 #### 3.4 Orders (Pesanan)
 
@@ -101,8 +103,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 #### 3.9 Settings (Pengaturan)
 
-- [~] **STUB** — Form ada (branding, email_from, reply_to, PG provider+keys), tapi tombol Simpan hanya `showToast('Branding disimpan')`. Tidak nyimpen ke `tenants.branding` atau `tenants.settings`.
-- [ ] **TODO** — `AdminController::settingsSave()` + route `POST /admin/settings` yang update `tenants.branding`/`settings`.
+- [x] **DONE** — `AdminController::settingsSave()` + `POST /admin/settings` (3 section: `branding`, `payment`, `notifications`). Branding update `tenants.name` + `tenants.branding.{primary_color,email_from,reply_to}`. Payment + notifications nyimpen ke `tenants.settings.{payment,notifications}`. Field password masked (`••••••••••`) tidak di-overwrite kalau user tidak ganti.
 - [ ] **TODO** — Upload logo (perlu storage; bisa filesystem dulu).
 
 ### 4. Customer Flow (Public)
