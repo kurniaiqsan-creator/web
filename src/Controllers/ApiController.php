@@ -593,14 +593,17 @@ class ApiController
     {
         $data = $this->input();
         $token = $data['ticket_token'] ?? '';
+        $sessionTenantId = (int)($_SESSION['tenant_id'] ?? 0);
 
         $ticket = Database::fetch(
-            "SELECT t.*, o.order_code FROM tickets t
+            "SELECT t.*, o.order_code, o.tenant_id AS order_tenant_id, o.status AS order_status
+             FROM tickets t
              JOIN orders o ON t.order_id = o.id WHERE t.ticket_token = ?",
             [$token]
         );
 
-        if (!$ticket) {
+        // Tiket tidak ada, ATAU milik tenant lain (cegah staff lintas-tenant memvalidasi).
+        if (!$ticket || ($sessionTenantId > 0 && (int)$ticket['order_tenant_id'] !== $sessionTenantId)) {
             return $this->json([
                 'ticket_id' => 0,
                 'status'    => 'invalid',
@@ -627,7 +630,7 @@ class ApiController
 
             return $this->json([
                 'ticket_id'  => $ticket['id'],
-                'order_id'   => (string)$ticket['order_id'],
+                'order_id'   => $ticket['order_code'],
                 'status'     => 'valid',
                 'seat_label' => $ticket['seat_label'],
                 'used'       => true,
@@ -637,17 +640,30 @@ class ApiController
         }
 
         if ($ticket['status'] === 'used') {
+            // Catat percobaan scan ulang (audit: ketahuan ada yang coba masuk 2x).
+            Database::insert('ticket_scans', [
+                'ticket_id'           => $ticket['id'],
+                'scanned_by_user_id'  => $_SESSION['user_id'] ?? null,
+                'scanner_id'          => $data['scanner_id'] ?? 'web',
+                'scanned_at'          => date('Y-m-d H:i:s'),
+                'location'            => json_encode($data['location'] ?? []),
+                'result'              => 'already_used',
+                'created_at'          => date('Y-m-d H:i:s'),
+            ]);
+
             return $this->json([
-                'ticket_id' => $ticket['id'],
-                'status'    => 'used',
-                'result'    => 'already_used',
-                'used_at'   => $ticket['used_at'],
+                'ticket_id'  => $ticket['id'],
+                'order_id'   => $ticket['order_code'],
+                'status'     => 'used',
+                'seat_label' => $ticket['seat_label'],
+                'result'     => 'already_used',
+                'used_at'    => $ticket['used_at'],
             ]);
         }
 
         return $this->json([
             'ticket_id'  => $ticket['id'],
-            'order_id'   => (string)$ticket['order_id'],
+            'order_id'   => $ticket['order_code'],
             'status'     => $ticket['status'],
             'seat_label' => $ticket['seat_label'],
             'used'       => false,
