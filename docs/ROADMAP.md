@@ -123,7 +123,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Checkout prefill nama/email/telepon untuk customer login + nudge "Masuk" untuk guest (`views/public/checkout.php`).
 - [x] **DONE** — Header publik: tombol Masuk/Daftar (guest) atau nama akun + Keluar (login) (`views/layouts/main.php`).
 - [x] **DONE** — Admin login dibatasi role admin/staff/system_admin saja (`AuthController::login`), customer tidak bisa masuk ke panel admin.
-- [ ] **TODO** — Reset password (lupa password) via email. **BLOCKED** sampai SMTP tersedia (lihat section 5).
+- [x] **DONE** — Reset password (lupa password) via email. `/{slug}/lupa-password` + `/{slug}/reset-password/{token}`. Token di-hash (SHA-256), single-use, expiry 1 jam, anti-enumeration. Email via Mailer SMTP. Migration 004 (`password_resets`).
 - [ ] **TODO** — Edit profil customer (nama/telepon/password) di halaman akun.
 
 #### 4.1 Browse
