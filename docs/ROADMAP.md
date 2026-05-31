@@ -15,7 +15,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - `WIRED` — fungsi/route ada, UI ada, tapi belum end-to-end (mis. UI mock, backend belum nyimpen).
 - `STUB` — placeholder UI saja, belum ada logic backend.
 - `TODO` — belum ada.
-- `BLOCKED` — perlu kredensial / keputusan eksternal (PG, SendGrid, Twilio, dll.).
+- `BLOCKED` — perlu kredensial / keputusan eksternal (PG, SMTP, Fonnte, dll.).
 
 ---
 
@@ -99,7 +99,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 #### 3.8 Promotions / Coupons
 
 - [x] **DONE** — CRUD page `/admin/promotions`: list dengan badge status (Aktif/Habis/Kedaluwarsa/Akan datang), create/edit form (code unik per tenant, type percentage/fixed, value, usage_limit, valid_from/to, applicable_event_ids), delete.
-- [ ] **TODO** — Integrasi di checkout: `ApiController::evaluatePromo` sudah ada — perlu test end-to-end dengan kode `PROMO10` yang ter-seed.
+- [x] **DONE** — Integrasi di checkout: `evaluatePromo` tenant-scoped & event-aware, dipakai di order. Promo divalidasi server-side di `createOrder`, diskon dihitung dari harga DB, `used_count` di-increment. Tested dengan `PROMO10`.
 
 #### 3.9 Settings (Pengaturan)
 
@@ -144,22 +144,22 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 
 ### 5. Notifikasi
 
-- [ ] **TODO** — Email transaksional (order paid, e-ticket). **BLOCKED** sampai SendGrid API key tersedia. PRD spec di section 5.
-- [ ] **TODO** — SMS/WhatsApp via Twilio. **BLOCKED** sampai Twilio creds.
+- [ ] **TODO** — Email transaksional (order paid, e-ticket) via SMTP (Gmail App Password). **BLOCKED** sampai kredensial SMTP tersedia. PRD spec di section 5.
+- [ ] **TODO** — WhatsApp via Fonnte (`FONNTE_TOKEN`). **BLOCKED** sampai token Fonnte tersedia.
 - [ ] **TODO** — Push (FCM) — PRD optional.
 - [ ] **TODO** — Tabel `notifications_outbox` (queue ringan, retry, logging). Belum ada di schema.
 
 ### 6. Sistem Promosi
 
-- [~] **WIRED** — `ApiController::evaluatePromo()` ada (`src/Controllers/ApiController.php:215`), belum di-test integrasi dengan checkout flow.
+- [~] **WIRED** — `ApiController::evaluatePromo()` ada (`src/Controllers/ApiController.php`), kini tenant-scoped & event-aware, dipakai juga oleh order.
 - [ ] **TODO** — Admin UI promo (#3.8 di atas).
-- [ ] **TODO** — Apply promo di `createOrder` (potong `total_amount_cents`).
-- [ ] **TODO** — Track `usage_count` per `promotions.id`.
+- [x] **DONE** — Apply promo di `createOrder` (potong `total_amount_cents` dari harga DB).
+- [x] **DONE** — Track `usage_count` per `promotions.id` (increment saat order dibuat dengan diskon).
 
 ### 7. Quotas & Inventory
 
 - [x] **DONE** — Schema `ticket_categories.quota`, `seats.status`.
-- [ ] **TODO** — Enforce quota saat seat hold + order create (lock + decrement atomically).
+- [x] **DONE** — Enforce quota saat seat hold + order create (lock baris `FOR UPDATE`, cek status available, set `blocked` saat order). Self-healing: order pending basi otomatis dilepas + di-cancel saat ada order baru (TTL `seat_hold_ttl`).
 - [ ] **TODO** — Tampilkan "Tersisa N tiket" di event page.
 
 ---
@@ -193,7 +193,7 @@ Mismatch yang perlu keputusan:
 
 1. **Stack berbeda dari PRD.** PRD section 2 sebut "Django backend + Next.js frontend". Implementasi nyata = PHP murni server-rendered. Saya pakai yang nyata (PHP) karena codebase sudah jalan; PRD section 2 sebaiknya di-update atau diberi note "Phase 1 sementara di PHP, migrasi nanti jika perlu".
 2. **Payment provider.** PRD sebut Midtrans / Xendit / DOKU. Belum ada keys → semua flow PG di-stub. Action: minta sandbox keys + pilih provider default untuk Phase 1.
-3. **Notification provider.** PRD sebut SendGrid + Twilio. Sama — perlu keys.
+3. **Notification provider.** PRD sebut SendGrid + Twilio. Email pakai **SMTP (Gmail App Password)** — gratis, tanpa setup DNS, cukup untuk skala project. WhatsApp diganti ke **Fonnte** (lebih relevan & murah untuk pasar Indonesia). Sama — perlu keys.
 4. **QR generation.** PRD section 5 sebut external API `api.qrserver.com` atau server-side library. Saat ini belum di-generate. Rekomendasi: server-side lewat `endroid/qr-code` (composer) untuk avoid external dependency.
 
 ---
