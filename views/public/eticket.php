@@ -14,7 +14,11 @@
 
                 <div class="d-flex justify-content-center mb-3">
                     <div class="rounded-3 border bg-white p-3">
-                        <div id="qr-code" data-url="<?= View::e(base_url('/t/' . $ticket['ticket_token'])) ?>"></div>
+                        <?php if (!empty($qrDataUri)): ?>
+                            <img src="<?= View::e($qrDataUri) ?>" alt="QR Code Tiket" width="200" height="200" style="display:block">
+                        <?php else: ?>
+                            <div id="qr-code" data-url="<?= View::e(base_url('/t/' . $ticket['ticket_token'])) ?>"></div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -39,8 +43,8 @@
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary btn-sm flex-grow-1" type="button" onclick="showToast('PDF diunduh')">
-                        <i class="cil-cloud-download me-1"></i>PDF
+                    <button class="btn btn-outline-primary btn-sm flex-grow-1" type="button" onclick="window.print()">
+                        <i class="cil-print me-1"></i>Cetak / PDF
                     </button>
                     <button class="btn btn-outline-secondary btn-sm flex-grow-1" type="button"
                             onclick="navigator.clipboard.writeText(window.location.href);showToast('Link disalin')">
@@ -53,6 +57,7 @@
         <p class="mt-3 text-center small text-medium-emphasis">Tunjukkan QR code ini saat masuk venue</p>
     </div>
 </div>
+<?php if (empty($qrDataUri)): ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -60,4 +65,5 @@
         if (el) new QRCode(el, { text: el.dataset.url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
     });
 </script>
+<?php endif; ?>
 <?php $content = ob_get_clean(); require VIEW_PATH . '/layouts/main.php'; ?>

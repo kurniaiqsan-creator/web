@@ -1,0 +1,13 @@
+{
+    "name": "visi/web",
+    "description": "Visi — platform tiket (PHP custom MVC).",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "endroid/qr-code": "^5.0"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}

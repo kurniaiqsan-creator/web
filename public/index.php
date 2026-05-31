@@ -26,6 +26,12 @@ spl_autoload_register(function (string $class): void {
 // Muat .env (jika ada) sebelum apa pun yang membaca getenv() (BASE_URL & config).
 Env::load(BASE_PATH . '/.env');
 
+// Composer autoload (opsional). Kalau vendor/ belum di-install, app tetap jalan
+// dan fitur yang butuh paste (mis. QR server-side) otomatis fallback.
+if (is_file(BASE_PATH . '/vendor/autoload.php')) {
+    require_once BASE_PATH . '/vendor/autoload.php';
+}
+
 // BASE_URL bisa sudah didefinisikan oleh root index.php (akses via subdirectory).
 // Kalau belum, ambil dari APP_BASE_URL (yang kini bisa berasal dari .env).
 if (!defined('BASE_URL')) {
@@ -106,6 +112,10 @@ $router->get('/onboarding', function () {
 // ===== E-TICKET (harus sebelum /{tenantSlug}) =====
 $router->get('/t/{token}', function (string $token) {
     return (new PublicController())->eticket($token);
+});
+
+$router->get('/t/{token}/qr.png', function (string $token) {
+    return (new PublicController())->eticketQr($token);
 });
 
 // ===== ADMIN ROUTES (harus sebelum /{tenantSlug}) =====

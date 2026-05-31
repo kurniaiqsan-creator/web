@@ -111,7 +111,41 @@ class PublicController
         );
         if (!$ticket) { http_response_code(404); return Router::renderError(404, 'Tiket tidak ditemukan'); }
 
-        return View::render('public/eticket', ['title' => 'E-Ticket', 'ticket' => $ticket]);
+        // QR server-side (PNG data URI) bila library tersedia; kalau tidak, view fallback ke JS.
+        $qrContent = base_url('/t/' . $ticket['ticket_token']);
+        $qrDataUri = Qr::dataUri($qrContent, 200, 10);
+
+        return View::render('public/eticket', [
+            'title'     => 'E-Ticket',
+            'ticket'    => $ticket,
+            'qrDataUri' => $qrDataUri,
+        ]);
+    }
+
+    /**
+     * GET /t/{token}/qr.png — stream PNG QR untuk tiket (server-side).
+     * Berguna untuk print/email yang tidak bisa eksekusi JS.
+     */
+    public function eticketQr(string $token): string
+    {
+        $ticket = Database::fetch('SELECT ticket_token FROM tickets WHERE ticket_token = ?', [$token]);
+        if (!$ticket) {
+            http_response_code(404);
+            return Router::renderError(404, 'Tiket tidak ditemukan');
+        }
+
+        $png = Qr::pngBytes(base_url('/t/' . $token), 320, 16);
+        if ($png === null) {
+            http_response_code(503);
+            header('Content-Type: text/plain; charset=utf-8');
+            return 'QR generator tidak tersedia (jalankan composer install).';
+        }
+
+        header('Content-Type: image/png');
+        header('Cache-Control: public, max-age=86400');
+        header('Content-Length: ' . strlen($png));
+        echo $png;
+        return '';
     }
 
     public function onboarding(): string
