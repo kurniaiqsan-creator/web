@@ -1,8 +1,43 @@
 <?php ob_start(); ?>
+<?php $f = $filters ?? ['status' => '', 'from' => '', 'to' => '', 'q' => '']; ?>
 <div>
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div><h1 class="fs-3 fw-bold mb-1">Pesanan</h1><p class="text-medium-emphasis mb-0">Kelola semua pesanan tiket</p></div>
-        <a class="btn btn-outline-secondary" href="<?= base_url('/admin/orders/export') ?>"><i class="cil-data-transfer-down me-1"></i>Export CSV</a>
+        <a class="btn btn-outline-secondary" href="<?= base_url('/admin/orders/export?' . http_build_query($f)) ?>"><i class="cil-data-transfer-down me-1"></i>Export CSV</a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" action="<?= base_url('/admin/orders') ?>" class="row g-2 align-items-end">
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                    <label class="form-label small mb-1">Cari</label>
+                    <input type="search" class="form-control" name="q" value="<?= View::e($f['q']) ?>" placeholder="Kode / nama / email">
+                </div>
+                <div class="col-6 col-md-3 col-lg-2">
+                    <label class="form-label small mb-1">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="">Semua</option>
+                        <?php foreach (['pending'=>'Pending','paid'=>'Lunas','failed'=>'Gagal','cancelled'=>'Batal','refunded'=>'Refund'] as $val=>$lbl): ?>
+                            <option value="<?= $val ?>" <?= $f['status'] === $val ? 'selected' : '' ?>><?= $lbl ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-lg-2">
+                    <label class="form-label small mb-1">Dari</label>
+                    <input type="date" class="form-control" name="from" value="<?= View::e($f['from']) ?>">
+                </div>
+                <div class="col-6 col-md-3 col-lg-2">
+                    <label class="form-label small mb-1">Sampai</label>
+                    <input type="date" class="form-control" name="to" value="<?= View::e($f['to']) ?>">
+                </div>
+                <div class="col-6 col-md-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="cil-filter me-1"></i>Filter</button>
+                    <?php if ($f['q'] !== '' || $f['status'] !== '' || $f['from'] !== '' || $f['to'] !== ''): ?>
+                        <a href="<?= base_url('/admin/orders') ?>" class="btn btn-outline-secondary">Reset</a>
+                    <?php endif; ?>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div class="card">

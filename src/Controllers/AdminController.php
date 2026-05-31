@@ -357,22 +357,89 @@ class AdminController
         Router::redirect('/admin/venues');
     }
 
+    /**
+     * Bangun klausa WHERE + params untuk daftar order berdasarkan filter $_GET.
+     * Dipakai bersama oleh orders() dan ordersExport().
+     *
+     * @return array{where:string, params:array, filters:array{status:string,from:string,to:string,q:string}}
+     */
+    private function buildOrderFilter(int $tenantId): array
+    {
+        $status = (string)($_GET['status'] ?? '');
+        $validStatuses = ['pending', 'paid', 'failed', 'cancelled', 'refunded'];
+        if (!in_array($status, $validStatuses, true)) {
+            $status = '';
+        }
+        $dateFrom = trim((string)($_GET['from'] ?? ''));
+        $dateTo   = trim((string)($_GET['to'] ?? ''));
+        $search   = trim((string)($_GET['q'] ?? ''));
+
+        $isYmd = static fn(string $d): bool => (bool)preg_match('/^\d{4}-\d{2}-\d{2}$/', $d);
+        if (!$isYmd($dateFrom)) $dateFrom = '';
+        if (!$isYmd($dateTo))   $dateTo = '';
+
+        $where  = ['o.tenant_id = ?'];
+        $params = [$tenantId];
+
+        if ($status !== '') {
+            $where[] = 'o.status = ?';
+            $params[] = $status;
+        }
+        if ($dateFrom !== '') {
+            $where[] = 'o.created_at >= ?';
+            $params[] = $dateFrom . ' 00:00:00';
+        }
+        if ($dateTo !== '') {
+            $where[] = 'o.created_at <= ?';
+            $params[] = $dateTo . ' 23:59:59';
+        }
+        if ($search !== '') {
+            $where[] = '(o.order_code LIKE ? OR o.customer_name LIKE ? OR o.customer_email LIKE ?)';
+            $like = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        return [
+            'where'   => implode(' AND ', $where),
+            'params'  => $params,
+            'filters' => ['status' => $status, 'from' => $dateFrom, 'to' => $dateTo, 'q' => $search],
+        ];
+    }
+
     public function orders(): string
     {
-        $tenantId = $_SESSION['tenant_id'] ?? 0;
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $filter = $this->buildOrderFilter($tenantId);
+
         $orders = Database::fetchAll(
-            "SELECT * FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50",
-            [$tenantId]
+            "SELECT o.* FROM orders o WHERE {$filter['where']} ORDER BY o.created_at DESC LIMIT 200",
+            $filter['params']
         );
 
         return View::render('admin/orders', [
-            'title' => 'Pesanan', 'orders' => $orders,
+            'title'   => 'Pesanan',
+            'orders'  => $orders,
+            'filters' => $filter['filters'],
         ]);
     }
 
     public function customers(): string
     {
         $tenantId = $_SESSION['tenant_id'] ?? 0;
+        $search = trim((string)($_GET['q'] ?? ''));
+
+        $params = [$tenantId];
+        $havingSql = '';
+        if ($search !== '') {
+            // Filter via HAVING karena kolom hasil COALESCE aggregate.
+            $havingSql = "HAVING name LIKE ? OR email LIKE ? OR phone LIKE ?";
+            $like = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
 
         $customers = Database::fetchAll(
             "SELECT
@@ -391,15 +458,75 @@ class AdminController
              GROUP BY COALESCE(u.id, 0), COALESCE(u.email, o.customer_email),
                       COALESCE(u.name, o.customer_name, '(tanpa nama)'),
                       COALESCE(u.phone, o.customer_phone)
+             {$havingSql}
              ORDER BY last_order_at DESC
              LIMIT 200",
-            [$tenantId]
+            $params
         );
 
         return View::render('admin/customers', [
             'title'     => 'Customer',
             'customers' => $customers,
+            'search'    => $search,
         ]);
+    }
+
+    /**
+     * GET /admin/customers/export — CSV daftar customer agregat (hormati ?q=).
+     */
+    public function customersExport(): never
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $search = trim((string)($_GET['q'] ?? ''));
+
+        $params = [$tenantId];
+        $havingSql = '';
+        if ($search !== '') {
+            $havingSql = "HAVING name LIKE ? OR email LIKE ? OR phone LIKE ?";
+            $like = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $customers = Database::fetchAll(
+            "SELECT
+                COALESCE(u.name, o.customer_name, '(tanpa nama)') AS name,
+                COALESCE(u.email, o.customer_email) AS email,
+                COALESCE(u.phone, o.customer_phone) AS phone,
+                COUNT(o.id) AS order_count,
+                COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total_amount_cents ELSE 0 END), 0) AS total_spent_cents,
+                COALESCE(SUM(CASE WHEN o.status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
+                MAX(o.created_at) AS last_order_at
+             FROM orders o
+             LEFT JOIN users u ON u.id = o.user_id
+             WHERE o.tenant_id = ?
+               AND COALESCE(u.email, o.customer_email) IS NOT NULL
+             GROUP BY COALESCE(u.id, 0), COALESCE(u.email, o.customer_email),
+                      COALESCE(u.name, o.customer_name, '(tanpa nama)'),
+                      COALESCE(u.phone, o.customer_phone)
+             {$havingSql}
+             ORDER BY last_order_at DESC",
+            $params
+        );
+
+        $filename = 'customers-' . date('Y-m-d-His') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: no-store');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF"); // BOM untuk Excel
+        fputcsv($out, ['Nama', 'Email', 'Telepon', 'Total Order', 'Order Lunas', 'Total Belanja', 'Order Terakhir']);
+        foreach ($customers as $c) {
+            fputcsv($out, [
+                $c['name'], $c['email'], $c['phone'],
+                (int)$c['order_count'], (int)$c['paid_orders'],
+                (int)$c['total_spent_cents'], $c['last_order_at'],
+            ]);
+        }
+        fclose($out);
+        exit;
     }
 
     public function customerDetail(string $id): string
@@ -778,6 +905,7 @@ class AdminController
     public function ordersExport(): never
     {
         $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        $filter = $this->buildOrderFilter($tenantId);
         $orders = Database::fetchAll(
             "SELECT o.order_code, o.status, o.total_amount_cents, o.currency,
                     o.customer_name, o.customer_email, o.customer_phone,
@@ -785,9 +913,9 @@ class AdminController
                     e.title AS event_title
              FROM orders o
              LEFT JOIN events e ON e.id = o.event_id
-             WHERE o.tenant_id = ?
+             WHERE {$filter['where']}
              ORDER BY o.created_at DESC",
-            [$tenantId]
+            $filter['params']
         );
 
         $filename = 'orders-' . date('Y-m-d-His') . '.csv';

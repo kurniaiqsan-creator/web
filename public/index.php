@@ -150,6 +150,7 @@ $router->group('/admin', function (Router $r) {
 
     // Lain
     $r->get('/customers', [AdminController::class, 'customers']);
+    $r->get('/customers/export', [AdminController::class, 'customersExport']);
     $r->get('/customers/{id}', [AdminController::class, 'customerDetail']);
     $r->get('/reports', [AdminController::class, 'reports']);
     $r->get('/scanner', [AdminController::class, 'scanner']);

@@ -1,13 +1,23 @@
 <?php ob_start(); ?>
+<?php $q = $search ?? ''; ?>
 <div>
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div>
             <h1 class="fs-3 fw-bold mb-1">Customer</h1>
             <p class="text-medium-emphasis mb-0">Daftar pembeli yang pernah memesan tiket di event kamu.</p>
         </div>
         <div class="d-flex gap-2 align-items-center">
-            <input type="search" id="customerSearch" class="form-control form-control-sm" style="min-width:240px"
-                   placeholder="Cari nama atau email…" oninput="filterCustomers(this.value)">
+            <form method="get" action="<?= base_url('/admin/customers') ?>" class="d-flex gap-2">
+                <input type="search" name="q" class="form-control form-control-sm" style="min-width:220px"
+                       value="<?= View::e($q) ?>" placeholder="Cari nama, email, telepon…">
+                <button type="submit" class="btn btn-sm btn-primary"><i class="cil-magnifying-glass"></i></button>
+                <?php if ($q !== ''): ?>
+                    <a href="<?= base_url('/admin/customers') ?>" class="btn btn-sm btn-outline-secondary">Reset</a>
+                <?php endif; ?>
+            </form>
+            <a class="btn btn-sm btn-outline-secondary" href="<?= base_url('/admin/customers/export?' . http_build_query(['q' => $q])) ?>">
+                <i class="cil-data-transfer-down me-1"></i>Export CSV
+            </a>
         </div>
     </div>
 
@@ -70,15 +80,4 @@
         </div>
     </div>
 </div>
-
-<script>
-function filterCustomers(query) {
-    var q = (query || '').toLowerCase().trim();
-    var rows = document.querySelectorAll('#customerTable tbody tr');
-    rows.forEach(function (r) {
-        var t = r.textContent.toLowerCase();
-        r.style.display = (q === '' || t.indexOf(q) !== -1) ? '' : 'none';
-    });
-}
-</script>
 <?php $content = ob_get_clean(); require VIEW_PATH . '/layouts/admin.php'; ?>
