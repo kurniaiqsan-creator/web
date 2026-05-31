@@ -1,6 +1,6 @@
 <?php ob_start(); ?>
 <div class="container-lg py-4" style="max-width:42rem" x-data="checkout()" x-init="init()">
-    <a href="<?= base_url('/' . $tenant['slug'] . '/events/' . $event['id']) ?>"
+    <a href="<?= base_url('/events/' . $event['id']) ?>"
        class="text-medium-emphasis text-decoration-none small mb-4 d-inline-flex align-items-center gap-1">
         <i class="cil-arrow-left"></i> Kembali ke event
     </a>
@@ -11,7 +11,7 @@
         <div class="card">
             <div class="card-body text-center p-4">
                 <p class="text-medium-emphasis small mb-3">Keranjang kosong. Silakan pilih kursi terlebih dahulu.</p>
-                <a href="<?= base_url('/' . $tenant['slug'] . '/events/' . $event['id']) ?>" class="btn btn-primary">Pilih Kursi</a>
+                <a href="<?= base_url('/events/' . $event['id']) ?>" class="btn btn-primary">Pilih Kursi</a>
             </div>
         </div>
     </template>
@@ -75,7 +75,7 @@
                             <i class="cil-user text-primary"></i>
                             <span>
                                 Sudah punya akun?
-                                <a href="<?= base_url('/' . $tenant['slug'] . '/masuk?next=' . urlencode('/' . $tenant['slug'] . '/events/' . $event['id'] . '/checkout')) ?>">Masuk</a>
+                                <a href="<?= base_url('/masuk?next=' . urlencode('/events/' . $event['id'] . '/checkout')) ?>">Masuk</a>
                                 supaya pesanan tersimpan di akunmu.
                             </span>
                         </div>
@@ -153,7 +153,6 @@
 function checkout() {
     return {
         tenantId: <?= (int)($tenant['id'] ?? 0) ?>,
-        tenantSlug: '<?= View::e($tenant['slug'] ?? '') ?>',
         eventId: <?= (int)($event['id'] ?? 0) ?>,
         eventTitle: '<?= View::e($event['title'] ?? '') ?>',
         venueName: '<?= View::e($event['venue_name'] ?? '') ?>',
@@ -283,7 +282,7 @@ function checkout() {
                 const data = await res.json();
                 if (res.ok) {
                     sessionStorage.removeItem('visi_cart');
-                    window.location.href = base_url('/' + this.tenantSlug + '/events/' + this.eventId + '/confirmation?order=' + encodeURIComponent(this.orderCode));
+                    window.location.href = base_url('/events/' + this.eventId + '/confirmation?order=' + encodeURIComponent(this.orderCode));
                 } else {
                     showToast((data.error && data.error.message) || 'Gagal simulasi', 'error');
                     this.loading = false;

@@ -28,11 +28,11 @@
 
                 <?php if (!empty($tenant)): ?>
                     <p class="text-center small mt-3 mb-0">
-                        <a href="<?= base_url('/' . $tenant['slug'] . '/lupa-password') ?>">Lupa password?</a>
+                        <a href="<?= base_url('/lupa-password') ?>">Lupa password?</a>
                     </p>
                     <p class="text-center small text-medium-emphasis mt-1 mb-0">
                         Belum punya akun?
-                        <a href="<?= base_url('/' . $tenant['slug'] . '/daftar') ?>">Daftar di sini</a>
+                        <a href="<?= base_url('/daftar') ?>">Daftar di sini</a>
                     </p>
                 <?php endif; ?>
             </div>

@@ -12,7 +12,7 @@
     <h2 class="h5 fw-semibold mb-3">Event Mendatang</h2>
     <div class="d-flex flex-column gap-3">
         <?php foreach ($events as $event): ?>
-            <a href="<?= base_url("/{$tenant['slug']}/events/{$event['id']}") ?>"
+            <a href="<?= base_url("/events/{$event['id']}") ?>"
                class="card text-decoration-none text-body hover-shadow">
                 <div class="card-body d-flex flex-column flex-sm-row align-items-sm-center gap-3">
                     <div class="text-center text-sm-start" style="min-width:6rem">

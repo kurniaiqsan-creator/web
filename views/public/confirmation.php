@@ -1,6 +1,6 @@
 <?php ob_start(); ?>
 <div class="container-lg py-4" style="max-width:42rem">
-    <a href="<?= base_url('/' . $tenant['slug']) ?>"
+    <a href="<?= base_url('/') ?>"
        class="text-medium-emphasis text-decoration-none small mb-4 d-inline-flex align-items-center gap-1">
         <i class="cil-arrow-left"></i> Kembali ke event
     </a>
@@ -10,7 +10,7 @@
             <div class="card-body text-center p-4">
                 <h1 class="h5 fw-bold mb-1">Order tidak ditemukan</h1>
                 <p class="small text-medium-emphasis">Order <span class="font-monospace"><?= View::e($orderCode) ?></span> tidak ditemukan.</p>
-                <a href="<?= base_url('/' . $tenant['slug']) ?>" class="btn btn-primary mt-2">Kembali</a>
+                <a href="<?= base_url('/') ?>" class="btn btn-primary mt-2">Kembali</a>
             </div>
         </div>
     <?php else: ?>
@@ -51,36 +51,40 @@
 
                         <div class="d-flex justify-content-center mb-3">
                             <div class="rounded-3 border bg-white p-3">
-                                <div class="qr-code" data-url="<?= View::e($ticketUrl) ?>"></div>
+                                <?php $qr = $qrByToken[$t['ticket_token']] ?? null; ?>
+                                <?php if (!empty($qr)): ?>
+                                    <img src="<?= View::e($qr) ?>" alt="QR Code Tiket" width="200" height="200" style="display:block">
+                                <?php else: ?>
+                                    <div class="qr-code" data-url="<?= View::e($ticketUrl) ?>"></div>
+                                <?php endif; ?>
                             </div>
                         </div>
 
                         <div class="row g-2 small mb-3">
                             <div class="col-6">
-                                <div class="rounded-3 bg-body-tertiary p-3">
+                                <div class="rounded-3 bg-body-tertiary p-3 text-center">
                                     <div class="text-medium-emphasis small">Kursi</div>
-                                    <div class="fw-semibold"><?= View::e($t['seat_label'] ?: 'GA') ?></div>
+                                    <div class="fs-5 fw-bold"><?= View::e($t['seat_label'] ?: 'GA') ?></div>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="rounded-3 bg-body-tertiary p-3">
+                                <div class="rounded-3 bg-body-tertiary p-3 text-center">
                                     <div class="text-medium-emphasis small">Status</div>
                                     <span class="badge text-bg-success mt-1"><?= $t['status'] === 'valid' ? 'Valid' : View::e($t['status']) ?></span>
                                 </div>
                             </div>
-                            <div class="col-12">
-                                <div class="rounded-3 bg-body-tertiary p-3">
-                                    <div class="text-medium-emphasis small">Token</div>
-                                    <div class="font-monospace small text-break"><?= View::e($t['ticket_token']) ?></div>
-                                </div>
-                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between small text-medium-emphasis px-1 mb-3">
+                            <span>Order: <?= View::e($orderCode) ?></span>
+                            <span class="font-monospace"><?= substr(View::e($t['ticket_token']), 0, 12) ?></span>
                         </div>
 
                         <div class="d-flex flex-wrap gap-2">
-                            <a href="<?= View::e($ticketUrl) ?>" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <a href="<?= View::e($ticketUrl) ?>" target="_blank" class="btn btn-outline-primary btn-sm flex-grow-1">
                                 <i class="cil-external-link me-1"></i>Buka E-Ticket
                             </a>
-                            <button class="btn btn-outline-secondary btn-sm" type="button"
+                            <button class="btn btn-outline-secondary btn-sm flex-grow-1" type="button"
                                     onclick="navigator.clipboard.writeText('<?= View::e($ticketUrl) ?>');showToast('Link disalin')">
                                 <i class="cil-share me-1"></i>Bagikan
                             </button>
@@ -119,7 +123,7 @@
                         <button type="button" class="btn btn-outline-primary btn-sm" onclick="simulatePay('<?= View::e($orderCode) ?>')">(Dev) Simulasi Bayar Sukses</button>
                     <?php endif; ?>
 
-                    <form method="post" action="<?= base_url('/' . $tenant['slug'] . '/events/' . $order['event_id'] . '/cancel-order') ?>"
+                    <form method="post" action="<?= base_url('/events/' . $order['event_id'] . '/cancel-order') ?>"
                           onsubmit="return confirm('Batalkan pesanan ini? Kursi akan dilepas.')">
                         <input type="hidden" name="order" value="<?= View::e($orderCode) ?>">
                         <button type="submit" class="btn btn-link text-danger btn-sm">Batalkan Pesanan</button>
@@ -140,7 +144,7 @@
                 <p class="small text-medium-emphasis mb-3">
                     Order <span class="font-monospace fw-semibold"><?= View::e($orderCode) ?></span>
                 </p>
-                <a href="<?= base_url('/' . $tenant['slug'] . '/events/' . $order['event_id']) ?>" class="btn btn-primary mt-2">Pesan Lagi</a>
+                <a href="<?= base_url('/events/' . $order['event_id']) ?>" class="btn btn-primary mt-2">Pesan Lagi</a>
             </div>
         </div>
         <?php endif; ?>

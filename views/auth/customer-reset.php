@@ -14,12 +14,12 @@
                     <div class="alert alert-danger py-2 small mb-3">
                         Link reset tidak valid atau sudah kedaluwarsa. Silakan minta link baru.
                     </div>
-                    <a href="<?= base_url('/' . $tenant['slug'] . '/lupa-password') ?>" class="btn btn-outline-primary w-100">Minta Link Baru</a>
+                    <a href="<?= base_url('/lupa-password') ?>" class="btn btn-outline-primary w-100">Minta Link Baru</a>
                 <?php else: ?>
                     <?php if (!empty($error)): ?>
                         <div class="alert alert-danger py-2 small mb-3"><?= View::e($error) ?></div>
                     <?php endif; ?>
-                    <form method="POST" action="<?= base_url('/' . $tenant['slug'] . '/reset-password/' . urlencode($token)) ?>">
+                    <form method="POST" action="<?= base_url('/reset-password/' . urlencode($token)) ?>">
                         <div class="mb-3">
                             <label class="form-label">Password Baru</label>
                             <input type="password" name="password" class="form-control" placeholder="Minimal 6 karakter" required autofocus>

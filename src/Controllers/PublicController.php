@@ -2,19 +2,20 @@
 
 class PublicController
 {
-    public function home(): string
+    /** Tenant tunggal (single-tenant MVP). Diambil sekali. */
+    private function defaultTenant(): ?array
     {
-        return View::render('public/home', ['title' => 'Visi — Platform Tiket']);
+        return Database::fetch(
+            'SELECT * FROM tenants WHERE deleted_at IS NULL ORDER BY id ASC LIMIT 1'
+        );
     }
 
-    public function tenantHome(string $tenantSlug): string
+    public function home(): string
     {
-        $tenant = Database::fetch(
-            'SELECT * FROM tenants WHERE slug = ? AND deleted_at IS NULL', [$tenantSlug]
-        );
+        $tenant = $this->defaultTenant();
         if (!$tenant) {
             http_response_code(404);
-            return Router::renderError(404, 'Tenant tidak ditemukan');
+            return Router::renderError(404, 'Belum ada tenant');
         }
         $events = Database::fetchAll(
             "SELECT e.*, v.name as venue_name FROM events e
@@ -27,9 +28,9 @@ class PublicController
         ]);
     }
 
-    public function eventDetail(string $tenantSlug, string $eventSlug): string
+    public function eventDetail(string $eventSlug): string
     {
-        $tenant = Database::fetch('SELECT * FROM tenants WHERE slug = ? AND deleted_at IS NULL', [$tenantSlug]);
+        $tenant = $this->defaultTenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Event tidak ditemukan'); }
 
         $event = Database::fetch(
@@ -94,9 +95,9 @@ class PublicController
         ]);
     }
 
-    public function checkout(string $tenantSlug, string $eventSlug): string
+    public function checkout(string $eventSlug): string
     {
-        $tenant = Database::fetch('SELECT * FROM tenants WHERE slug = ?', [$tenantSlug]);
+        $tenant = $this->defaultTenant();
         $event = Database::fetch(
             "SELECT e.*, v.name as venue_name FROM events e JOIN venues v ON e.venue_id = v.id WHERE e.id = ?",
             [$eventSlug]
@@ -118,9 +119,9 @@ class PublicController
         ]);
     }
 
-    public function confirmation(string $tenantSlug, string $eventSlug): string
+    public function confirmation(string $eventSlug): string
     {
-        $tenant = Database::fetch('SELECT * FROM tenants WHERE slug = ?', [$tenantSlug]);
+        $tenant = $this->defaultTenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         $orderCode = $_GET['order'] ?? '';
@@ -131,6 +132,7 @@ class PublicController
 
         $tickets = [];
         $paymentUrl = null;
+        $qrByToken = [];
         if ($order) {
             $tickets = Database::fetchAll(
                 "SELECT t.*, e.title as event_title, e.start_time, v.name as venue_name
@@ -141,12 +143,18 @@ class PublicController
                 [$order['id']]
             );
 
+            // QR server-side (PNG data URI) per tiket — biar konsisten dengan halaman /t/{token}.
+            // Kalau library belum ada (vendor/ belum di-install), view fallback ke QR JS.
+            foreach ($tickets as $t) {
+                $qrByToken[$t['ticket_token']] = Qr::dataUri(base_url('/t/' . $t['ticket_token']), 200, 10);
+            }
+
             // Order masih pending → sediakan link bayar Pakasir untuk retry.
             if ($order['status'] === 'pending') {
                 $settings = json_decode($tenant['settings'] ?? '{}', true);
                 $pakasir = Pakasir::fromConfig(is_array($settings) ? $settings : []);
                 if ($pakasir !== null) {
-                    $redirect = base_url('/' . $tenant['slug'] . '/events/' . $order['event_id'] . '/confirmation?order=' . rawurlencode((string)$order['order_code']));
+                    $redirect = base_url('/events/' . $order['event_id'] . '/confirmation?order=' . rawurlencode((string)$order['order_code']));
                     $paymentUrl = $pakasir->paymentUrl((int)$order['total_amount_cents'], (string)$order['order_code'], $redirect, 'all');
                 }
             }
@@ -158,17 +166,18 @@ class PublicController
             'order'      => $order,
             'orderCode'  => $order['order_code'] ?? $orderCode,
             'tickets'    => $tickets,
+            'qrByToken'  => $qrByToken,
             'paymentUrl' => $paymentUrl,
             'sandbox'    => Pakasir::isSandbox(),
         ]);
     }
 
     /**
-     * POST /{slug}/events/{id}/cancel-order — batalkan order pending milik tenant ini.
+     * POST /events/{id}/cancel-order — batalkan order pending milik tenant ini.
      */
-    public function cancelOrder(string $tenantSlug, string $eventSlug): string
+    public function cancelOrder(string $eventSlug): string
     {
-        $tenant = Database::fetch('SELECT * FROM tenants WHERE slug = ?', [$tenantSlug]);
+        $tenant = $this->defaultTenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         $orderCode = (string)($_POST['order'] ?? '');
@@ -206,7 +215,7 @@ class PublicController
             }
         }
 
-        Router::redirect('/' . $tenant['slug'] . '/events/' . $eventSlug . '/confirmation?order=' . rawurlencode($orderCode));
+        Router::redirect('/events/' . $eventSlug . '/confirmation?order=' . rawurlencode($orderCode));
     }
 
     public function eticket(string $token): string

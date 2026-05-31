@@ -19,10 +19,10 @@ $statusMap = [
             </p>
         </div>
         <div class="d-flex gap-2">
-            <a href="<?= base_url('/' . $tenant['slug']) ?>" class="btn btn-outline-primary btn-sm">
+            <a href="<?= base_url('/') ?>" class="btn btn-outline-primary btn-sm">
                 <i class="cil-loop me-1"></i>Lihat Event
             </a>
-            <a href="<?= base_url('/' . $tenant['slug'] . '/keluar') ?>" class="btn btn-outline-secondary btn-sm">
+            <a href="<?= base_url('/keluar') ?>" class="btn btn-outline-secondary btn-sm">
                 <i class="cil-account-logout me-1"></i>Keluar
             </a>
         </div>
@@ -38,7 +38,7 @@ $statusMap = [
         </div>
         <div class="collapse" id="profileEdit">
             <div class="card-body">
-                <form method="post" action="<?= base_url('/' . $tenant['slug'] . '/akun/profil') ?>">
+                <form method="post" action="<?= base_url('/akun/profil') ?>">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Nama</label>
@@ -87,7 +87,7 @@ $statusMap = [
             <div class="card-body text-center p-5">
                 <i class="cil-bag fs-1 text-medium-emphasis mb-2 d-block"></i>
                 <p class="text-medium-emphasis mb-3">Belum ada pesanan. Yuk cari event menarik!</p>
-                <a href="<?= base_url('/' . $tenant['slug']) ?>" class="btn btn-primary">Jelajahi Event</a>
+                <a href="<?= base_url('/') ?>" class="btn btn-primary">Jelajahi Event</a>
             </div>
         </div>
     <?php else: ?>

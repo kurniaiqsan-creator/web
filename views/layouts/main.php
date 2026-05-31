@@ -45,13 +45,13 @@
                     <a href="<?= base_url('/admin/dashboard') ?>" class="btn btn-outline-secondary btn-sm">Dashboard</a>
                     <a href="<?= base_url('/logout') ?>" class="btn btn-link text-body-secondary btn-sm">Keluar</a>
                 <?php elseif (!empty($tenant) && !empty($_SESSION['customer_id']) && (int)($_SESSION['customer_tenant_id'] ?? 0) === (int)$tenant['id']): ?>
-                    <a href="<?= base_url('/' . $tenant['slug'] . '/akun') ?>" class="btn btn-outline-primary btn-sm">
+                    <a href="<?= base_url('/akun') ?>" class="btn btn-outline-primary btn-sm">
                         <i class="cil-user me-1"></i><?= View::e($_SESSION['customer_name'] ?? 'Akun') ?>
                     </a>
-                    <a href="<?= base_url('/' . $tenant['slug'] . '/keluar') ?>" class="btn btn-link text-body-secondary btn-sm">Keluar</a>
+                    <a href="<?= base_url('/keluar') ?>" class="btn btn-link text-body-secondary btn-sm">Keluar</a>
                 <?php elseif (!empty($tenant)): ?>
-                    <a href="<?= base_url('/' . $tenant['slug'] . '/masuk') ?>" class="btn btn-outline-primary btn-sm">Masuk</a>
-                    <a href="<?= base_url('/' . $tenant['slug'] . '/daftar') ?>" class="btn btn-primary btn-sm">Daftar</a>
+                    <a href="<?= base_url('/masuk') ?>" class="btn btn-outline-primary btn-sm">Masuk</a>
+                    <a href="<?= base_url('/daftar') ?>" class="btn btn-primary btn-sm">Daftar</a>
                 <?php else: ?>
                     <a href="<?= base_url('/login') ?>" class="btn btn-primary btn-sm">Masuk</a>
                 <?php endif; ?>

@@ -14,9 +14,9 @@
                     <div class="alert alert-success py-2 small mb-3">
                         Jika email terdaftar, link reset password sudah dikirim. Cek inbox (dan folder spam) kamu.
                     </div>
-                    <a href="<?= base_url('/' . $tenant['slug'] . '/masuk') ?>" class="btn btn-outline-primary w-100">Kembali ke Masuk</a>
+                    <a href="<?= base_url('/masuk') ?>" class="btn btn-outline-primary w-100">Kembali ke Masuk</a>
                 <?php else: ?>
-                    <form method="POST" action="<?= base_url('/' . $tenant['slug'] . '/lupa-password') ?>">
+                    <form method="POST" action="<?= base_url('/lupa-password') ?>">
                         <div class="mb-3">
                             <label class="form-label">Email</label>
                             <input type="email" name="email" class="form-control" placeholder="contoh@email.com" required autofocus>
@@ -24,7 +24,7 @@
                         <button type="submit" class="btn btn-primary w-100">Kirim Link Reset</button>
                     </form>
                     <p class="text-center small text-medium-emphasis mt-3 mb-0">
-                        <a href="<?= base_url('/' . $tenant['slug'] . '/masuk') ?>">Kembali ke Masuk</a>
+                        <a href="<?= base_url('/masuk') ?>">Kembali ke Masuk</a>
                     </p>
                 <?php endif; ?>
             </div>

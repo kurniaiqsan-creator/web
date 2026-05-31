@@ -18,10 +18,7 @@ class AuthController
         }
         // Sudah login sebagai customer → langsung ke akun.
         if (!empty($_SESSION['customer_id'])) {
-            $tenant = Database::fetch('SELECT slug FROM tenants WHERE id = ?', [$_SESSION['customer_tenant_id'] ?? 0]);
-            if ($tenant) {
-                Router::redirect('/' . $tenant['slug'] . '/akun');
-            }
+            Router::redirect('/akun');
         }
 
         return View::render('auth/login', [
@@ -68,8 +65,7 @@ class AuthController
                     [(int)$user['id'], (int)$user['tenant_id'], $user['email']]
                 );
 
-                $tenant = Database::fetch('SELECT slug FROM tenants WHERE id = ?', [$user['tenant_id']]);
-                Router::redirect(!empty($tenant['slug']) ? '/' . $tenant['slug'] . '/akun' : '/');
+                Router::redirect('/akun');
             }
         }
 

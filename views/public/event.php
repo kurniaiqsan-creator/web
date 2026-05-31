@@ -108,7 +108,6 @@ function gaPicker() {
             $acc[(int)$t['category_id']] = ['price' => (int)$t['price_cents'], 'category' => $t['name']];
             return $acc;
         }, []), JSON_UNESCAPED_UNICODE) ?: '{}' ?>,
-        tenantSlug: '<?= View::e($tenant['slug'] ?? '') ?>',
         eventId: <?= (int)($event['id'] ?? 0) ?>,
         eventTitle: '<?= View::e($event['title'] ?? '') ?>',
         venueName: '<?= View::e($event['venue_name'] ?? '') ?>',
@@ -148,7 +147,6 @@ function gaPicker() {
                 }
             });
             const cart = {
-                tenantSlug: this.tenantSlug,
                 eventId: this.eventId,
                 eventTitle: this.eventTitle,
                 venueName: this.venueName,
@@ -159,7 +157,7 @@ function gaPicker() {
                 ga: true,
             };
             sessionStorage.setItem('visi_cart', JSON.stringify(cart));
-            window.location.href = base_url('/' + this.tenantSlug + '/events/' + this.eventId + '/checkout');
+            window.location.href = base_url('/events/' + this.eventId + '/checkout');
         },
         formatRupiah(cents) {
             return 'Rp' + new Intl.NumberFormat('id-ID').format(cents);
@@ -343,7 +341,6 @@ function seatMap() {
         loading: false,
         timerInterval: null,
         holdId: null,
-        tenantSlug: '<?= View::e($tenant['slug'] ?? '') ?>',
         eventId: <?= (int)($event['id'] ?? 0) ?>,
         eventTitle: '<?= View::e($event['title'] ?? '') ?>',
         venueName: '<?= View::e($event['venue_name'] ?? '') ?>',
@@ -373,7 +370,6 @@ function seatMap() {
         },
         goToCheckout() {
             const cart = {
-                tenantSlug: this.tenantSlug,
                 eventId: this.eventId,
                 eventTitle: this.eventTitle,
                 venueName: this.venueName,
@@ -383,7 +379,7 @@ function seatMap() {
                 totalPrice: this.totalPrice,
             };
             sessionStorage.setItem('visi_cart', JSON.stringify(cart));
-            window.location.href = base_url('/' + this.tenantSlug + '/events/' + this.eventId + '/checkout');
+            window.location.href = base_url('/events/' + this.eventId + '/checkout');
         },
         async reserveSeats() {
             if (this.selectedSeats.length === 0) return showToast('Pilih kursi terlebih dahulu', 'error');

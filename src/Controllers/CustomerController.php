@@ -13,9 +13,9 @@
  */
 class CustomerController
 {
-    private function tenant(string $slug): ?array
+    private function tenant(): ?array
     {
-        return Database::fetch('SELECT * FROM tenants WHERE slug = ? AND deleted_at IS NULL', [$slug]);
+        return Database::fetch('SELECT * FROM tenants WHERE deleted_at IS NULL ORDER BY id ASC LIMIT 1');
     }
 
     /** Tautkan order guest (user_id NULL) ber-email sama ke akun customer. */
@@ -39,13 +39,13 @@ class CustomerController
 
     // ===== LOGIN =====
 
-    public function loginForm(string $tenantSlug): string
+    public function loginForm(): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         if (!empty($_SESSION['customer_id']) && (int)$_SESSION['customer_tenant_id'] === (int)$tenant['id']) {
-            Router::redirect('/' . $tenant['slug'] . '/akun');
+            Router::redirect('/akun');
         }
 
         return View::render('auth/customer-login', [
@@ -55,9 +55,9 @@ class CustomerController
         ]);
     }
 
-    public function login(string $tenantSlug): string
+    public function login(): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         $email = trim((string)($_POST['email'] ?? ''));
@@ -82,18 +82,18 @@ class CustomerController
         $this->loginCustomer($user);
         $this->linkGuestOrders((int)$user['id'], (int)$tenant['id'], $user['email']);
 
-        Router::redirect($this->safeNext($next, $tenant['slug']));
+        Router::redirect($this->safeNext($next));
     }
 
     // ===== REGISTER =====
 
-    public function registerForm(string $tenantSlug): string
+    public function registerForm(): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         if (!empty($_SESSION['customer_id']) && (int)$_SESSION['customer_tenant_id'] === (int)$tenant['id']) {
-            Router::redirect('/' . $tenant['slug'] . '/akun');
+            Router::redirect('/akun');
         }
 
         return View::render('auth/customer-register', [
@@ -103,9 +103,9 @@ class CustomerController
         ]);
     }
 
-    public function register(string $tenantSlug): string
+    public function register(): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         $name = trim((string)($_POST['name'] ?? ''));
@@ -164,12 +164,12 @@ class CustomerController
         $this->linkGuestOrders((int)$userId, (int)$tenant['id'], $email);
 
         Session::flash('Akun berhasil dibuat. Selamat datang, ' . $name . '!');
-        Router::redirect($this->safeNext($next, $tenant['slug']));
+        Router::redirect($this->safeNext($next));
     }
 
     // ===== LOGOUT =====
 
-    public function logout(string $tenantSlug): never
+    public function logout(): never
     {
         unset(
             $_SESSION['customer_id'],
@@ -177,25 +177,25 @@ class CustomerController
             $_SESSION['customer_email'],
             $_SESSION['customer_tenant_id']
         );
-        Router::redirect('/' . $tenantSlug);
+        Router::redirect('/');
     }
 
     /**
-     * POST /{slug}/akun/profil — update nama/telepon + ganti password opsional.
+     * POST /akun/profil — update nama/telepon + ganti password opsional.
      */
-    public function profileUpdate(string $tenantSlug): string
+    public function profileUpdate(): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         if (empty($_SESSION['customer_id']) || (int)$_SESSION['customer_tenant_id'] !== (int)$tenant['id']) {
-            Router::redirect('/' . $tenant['slug'] . '/masuk?next=' . urlencode('/' . $tenant['slug'] . '/akun'));
+            Router::redirect('/masuk?next=' . urlencode('/akun'));
         }
 
         $customerId = (int)$_SESSION['customer_id'];
         $user = Database::fetch('SELECT * FROM users WHERE id = ?', [$customerId]);
         if (!$user) {
-            Router::redirect('/' . $tenant['slug'] . '/akun');
+            Router::redirect('/akun');
         }
 
         $name  = trim((string)($_POST['name'] ?? ''));
@@ -206,7 +206,7 @@ class CustomerController
 
         if ($name === '') {
             Session::flash('Nama wajib diisi', 'error');
-            Router::redirect('/' . $tenant['slug'] . '/akun');
+            Router::redirect('/akun');
         }
 
         $data = [
@@ -218,15 +218,15 @@ class CustomerController
         if ($newPw !== '' || $confirmPw !== '' || $currentPw !== '') {
             if (!password_verify($currentPw, $user['password_hash'])) {
                 Session::flash('Password saat ini salah', 'error');
-                Router::redirect('/' . $tenant['slug'] . '/akun');
+                Router::redirect('/akun');
             }
             if (strlen($newPw) < 6) {
                 Session::flash('Password baru minimal 6 karakter', 'error');
-                Router::redirect('/' . $tenant['slug'] . '/akun');
+                Router::redirect('/akun');
             }
             if ($newPw !== $confirmPw) {
                 Session::flash('Konfirmasi password baru tidak cocok', 'error');
-                Router::redirect('/' . $tenant['slug'] . '/akun');
+                Router::redirect('/akun');
             }
             $data['password_hash'] = password_hash($newPw, PASSWORD_DEFAULT);
         }
@@ -237,14 +237,14 @@ class CustomerController
         $_SESSION['customer_name'] = $name;
 
         Session::flash('Profil berhasil diperbarui');
-        Router::redirect('/' . $tenant['slug'] . '/akun');
+        Router::redirect('/akun');
     }
 
     // ===== LUPA / RESET PASSWORD =====
 
-    public function forgotForm(string $tenantSlug): string
+    public function forgotForm(): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         return View::render('auth/customer-forgot', [
@@ -253,9 +253,9 @@ class CustomerController
         ]);
     }
 
-    public function forgot(string $tenantSlug): string
+    public function forgot(): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         $email = trim((string)($_POST['email'] ?? ''));
@@ -293,16 +293,16 @@ class CustomerController
                 'expires_at' => $expires,
             ]);
 
-            $resetUrl = $this->absoluteUrl('/' . $tenant['slug'] . '/reset-password/' . $plain);
+            $resetUrl = $this->absoluteUrl('/reset-password/' . $plain);
             $this->sendResetEmail($tenant, $user, $resetUrl);
         }
 
         return $genericDone();
     }
 
-    public function resetForm(string $tenantSlug, string $token): string
+    public function resetForm(string $token): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         $valid = $this->findValidReset($token, (int)$tenant['id']) !== null;
@@ -315,9 +315,9 @@ class CustomerController
         ]);
     }
 
-    public function reset(string $tenantSlug, string $token): string
+    public function reset(string $token): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         $reset = $this->findValidReset($token, (int)$tenant['id']);
@@ -357,7 +357,7 @@ class CustomerController
         );
 
         Session::flash('Password berhasil diubah. Silakan masuk dengan password baru.');
-        Router::redirect('/' . $tenant['slug'] . '/masuk');
+        Router::redirect('/masuk');
     }
 
     /**
@@ -420,13 +420,13 @@ class CustomerController
 
     // ===== AKUN / TIKET SAYA =====
 
-    public function account(string $tenantSlug): string
+    public function account(): string
     {
-        $tenant = $this->tenant($tenantSlug);
+        $tenant = $this->tenant();
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         if (empty($_SESSION['customer_id']) || (int)$_SESSION['customer_tenant_id'] !== (int)$tenant['id']) {
-            Router::redirect('/' . $tenant['slug'] . '/masuk?next=' . urlencode('/' . $tenant['slug'] . '/akun'));
+            Router::redirect('/masuk?next=' . urlencode('/akun'));
         }
 
         $customerId = (int)$_SESSION['customer_id'];
@@ -467,12 +467,12 @@ class CustomerController
         ]);
     }
 
-    /** Cegah open-redirect: hanya izinkan path internal milik tenant ini. */
-    private function safeNext(string $next, string $slug): string
+    /** Cegah open-redirect: hanya izinkan path internal (relatif). */
+    private function safeNext(string $next): string
     {
-        if ($next !== '' && str_starts_with($next, '/' . $slug . '/') && !str_contains($next, '//')) {
+        if ($next !== '' && str_starts_with($next, '/') && !str_starts_with($next, '//') && !str_contains($next, '://')) {
             return $next;
         }
-        return '/' . $slug . '/akun';
+        return '/akun';
     }
 }

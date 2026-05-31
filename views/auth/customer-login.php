@@ -14,7 +14,7 @@
                     <div class="alert alert-danger py-2 small mb-3"><?= View::e($error) ?></div>
                 <?php endif; ?>
 
-                <form method="POST" action="<?= base_url('/' . $tenant['slug'] . '/masuk') ?>">
+                <form method="POST" action="<?= base_url('/masuk') ?>">
                     <input type="hidden" name="next" value="<?= View::e($next ?? '') ?>">
                     <div class="mb-3">
                         <label class="form-label">Email</label>
@@ -29,11 +29,11 @@
                 </form>
 
                 <p class="text-center small mt-3 mb-0">
-                    <a href="<?= base_url('/' . $tenant['slug'] . '/lupa-password') ?>">Lupa password?</a>
+                    <a href="<?= base_url('/lupa-password') ?>">Lupa password?</a>
                 </p>
                 <p class="text-center small text-medium-emphasis mt-1 mb-0">
                     Belum punya akun?
-                    <a href="<?= base_url('/' . $tenant['slug'] . '/daftar' . (!empty($next) ? '?next=' . urlencode($next) : '')) ?>">Daftar di sini</a>
+                    <a href="<?= base_url('/daftar' . (!empty($next) ? '?next=' . urlencode($next) : '')) ?>">Daftar di sini</a>
                 </p>
             </div>
         </div>

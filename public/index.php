@@ -85,7 +85,7 @@ function tenantMiddleware(): void
     }
 }
 
-// ===== ROOT =====
+// ===== ROOT (single-tenant: langsung tampilkan daftar event) =====
 $router->get('/', function () {
     return (new PublicController())->home();
 });
@@ -189,40 +189,34 @@ $router->group('/api/v1', function (Router $r) {
 // ===== WEBHOOK (harus sebelum /{tenantSlug}) =====
 $router->post('/webhooks/payment', [ApiController::class, 'paymentWebhook']);
 
-// ===== CUSTOMER ACCOUNT (per-tenant, harus sebelum catch-all /{tenantSlug}) =====
-// Path statis ('masuk','daftar',...) didahulukan agar tidak tertangkap
-// route detail event /{tenantSlug}/events/{eventSlug}.
-$router->get('/{tenantSlug}/masuk', [CustomerController::class, 'loginForm']);
-$router->post('/{tenantSlug}/masuk', [CustomerController::class, 'login']);
-$router->get('/{tenantSlug}/daftar', [CustomerController::class, 'registerForm']);
-$router->post('/{tenantSlug}/daftar', [CustomerController::class, 'register']);
-$router->get('/{tenantSlug}/lupa-password', [CustomerController::class, 'forgotForm']);
-$router->post('/{tenantSlug}/lupa-password', [CustomerController::class, 'forgot']);
-$router->get('/{tenantSlug}/reset-password/{token}', [CustomerController::class, 'resetForm']);
-$router->post('/{tenantSlug}/reset-password/{token}', [CustomerController::class, 'reset']);
-$router->get('/{tenantSlug}/keluar', [CustomerController::class, 'logout']);
-$router->get('/{tenantSlug}/akun', [CustomerController::class, 'account']);
-$router->post('/{tenantSlug}/akun/profil', [CustomerController::class, 'profileUpdate']);
+// ===== CUSTOMER ACCOUNT (single-tenant, tanpa slug) =====
+$router->get('/masuk', [CustomerController::class, 'loginForm']);
+$router->post('/masuk', [CustomerController::class, 'login']);
+$router->get('/daftar', [CustomerController::class, 'registerForm']);
+$router->post('/daftar', [CustomerController::class, 'register']);
+$router->get('/lupa-password', [CustomerController::class, 'forgotForm']);
+$router->post('/lupa-password', [CustomerController::class, 'forgot']);
+$router->get('/reset-password/{token}', [CustomerController::class, 'resetForm']);
+$router->post('/reset-password/{token}', [CustomerController::class, 'reset']);
+$router->get('/keluar', [CustomerController::class, 'logout']);
+$router->get('/akun', [CustomerController::class, 'account']);
+$router->post('/akun/profil', [CustomerController::class, 'profileUpdate']);
 
-// ===== TENANT ROUTES (catch-all, harus TERAKHIR) =====
-$router->get('/{tenantSlug}', function (string $tenantSlug) {
-    return (new PublicController())->tenantHome($tenantSlug);
+// ===== PUBLIC EVENT ROUTES (single-tenant, tanpa slug) =====
+$router->get('/events/{eventSlug}', function (string $eventSlug) {
+    return (new PublicController())->eventDetail($eventSlug);
 });
 
-$router->get('/{tenantSlug}/events/{eventSlug}', function (string $tenantSlug, string $eventSlug) {
-    return (new PublicController())->eventDetail($tenantSlug, $eventSlug);
+$router->get('/events/{eventSlug}/checkout', function (string $eventSlug) {
+    return (new PublicController())->checkout($eventSlug);
 });
 
-$router->get('/{tenantSlug}/events/{eventSlug}/checkout', function (string $tenantSlug, string $eventSlug) {
-    return (new PublicController())->checkout($tenantSlug, $eventSlug);
+$router->get('/events/{eventSlug}/confirmation', function (string $eventSlug) {
+    return (new PublicController())->confirmation($eventSlug);
 });
 
-$router->get('/{tenantSlug}/events/{eventSlug}/confirmation', function (string $tenantSlug, string $eventSlug) {
-    return (new PublicController())->confirmation($tenantSlug, $eventSlug);
-});
-
-$router->post('/{tenantSlug}/events/{eventSlug}/cancel-order', function (string $tenantSlug, string $eventSlug) {
-    return (new PublicController())->cancelOrder($tenantSlug, $eventSlug);
+$router->post('/events/{eventSlug}/cancel-order', function (string $eventSlug) {
+    return (new PublicController())->cancelOrder($eventSlug);
 });
 
 // Dispatch
