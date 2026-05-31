@@ -92,9 +92,9 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 #### 3.7 Reports
 
 - [x] **DONE** — Sales by event aggregate (`/admin/reports` → `views/admin/reports.php`).
-- [ ] **TODO** — Filter periode + breakdown harian.
-- [ ] **TODO** — Attendance report (count tiket `used` per event).
-- [ ] **TODO** — Export CSV (PRD requirement).
+- [x] **DONE** — Filter periode + breakdown harian (`?from=&to=`, basis tanggal lunas/`updated_at`).
+- [x] **DONE** — Attendance report (count tiket `used` vs terjual per event + % kehadiran, KPI global).
+- [x] **DONE** — Export CSV (`/admin/reports/export`, hormati filter, kolom attendance %).
 
 #### 3.8 Promotions / Coupons
 
@@ -104,6 +104,7 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 #### 3.9 Settings (Pengaturan)
 
 - [x] **DONE** — `AdminController::settingsSave()` + `POST /admin/settings` (3 section: `branding`, `payment`, `notifications`). Branding update `tenants.name` + `tenants.branding.{primary_color,email_from,reply_to}`. Payment + notifications nyimpen ke `tenants.settings.{payment,notifications}`. Field password masked (`••••••••••`) tidak di-overwrite kalau user tidak ganti.
+- [x] **DONE** — Judul situs (suffix tab browser) & teks footer editable dari Settings → Branding (`tenants.branding.{site_title,footer_text}`). Dibaca via `Branding::siteTitle()` / `Branding::footerText()` di layout admin & publik. Kosongkan untuk reset ke default "Visi".
 - [ ] **TODO** — Upload logo (perlu storage; bisa filesystem dulu).
 
 #### 3.10 Ticket Categories (Tiket & Harga) — BARU di PR #5
@@ -124,13 +125,13 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Header publik: tombol Masuk/Daftar (guest) atau nama akun + Keluar (login) (`views/layouts/main.php`).
 - [x] **DONE** — Admin login dibatasi role admin/staff/system_admin saja (`AuthController::login`), customer tidak bisa masuk ke panel admin.
 - [x] **DONE** — Reset password (lupa password) via email. `/{slug}/lupa-password` + `/{slug}/reset-password/{token}`. Token di-hash (SHA-256), single-use, expiry 1 jam, anti-enumeration. Email via Mailer SMTP. Migration 004 (`password_resets`).
-- [ ] **TODO** — Edit profil customer (nama/telepon/password) di halaman akun.
+- [x] **DONE** — Edit profil customer (nama/telepon/password) di halaman akun (`POST /{slug}/akun/profil`, ganti password verifikasi password lama).
 
 #### 4.1 Browse
 
 - [x] **DONE** — Homepage daftar tenant (`/`), tenant home daftar event (`/{slug}`), event detail + seat map (`/{slug}/events/{id}`).
 - [x] **DONE** — Seat map interaktif (klik seat, pilih kategori, harga muncul). View: `views/public/event.php`.
-- [ ] **TODO** — Tampilkan promo aktif di event page.
+- [x] **DONE** — Tampilkan promo aktif di event page (badge kode + diskon, seat-map & GA, event-aware).
 
 #### 4.2 Checkout & Payment
 
