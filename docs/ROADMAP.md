@@ -138,9 +138,9 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 #### 4.4 E-Ticket
 
 - [x] **DONE** — Route `/t/{token}` (`PublicController::eticket`).
-- [ ] **TODO** — Generate QR image server-side (perlu library mis. `endroid/qr-code` via composer, atau pakai pattern PRD `api.qrserver.com`).
+- [x] **DONE** — Generate QR image server-side via `endroid/qr-code` (composer). `src/Qr.php` → PNG data URI di e-ticket + endpoint `/t/{token}/qr.png`. Fallback ke QR client-side (qrcodejs) kalau `vendor/` belum di-install. **Catatan:** jalankan `composer install` setelah clone.
 - [ ] **TODO** — Wallet pass / add-to-Apple-Wallet link (PRD optional).
-- [ ] **TODO** — Print-friendly PDF / email-friendly HTML.
+- [x] **DONE** — Print-friendly: tombol "Cetak / PDF" panggil `window.print()` (QR server-side ikut ter-render tanpa JS).
 
 ### 5. Notifikasi
 
