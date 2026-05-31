@@ -81,7 +81,7 @@ class AdminController
         $events = Database::fetchAll(
             "SELECT e.*, v.name as venue_name FROM events e
              JOIN venues v ON e.venue_id = v.id
-             WHERE e.tenant_id = ? ORDER BY e.start_time DESC",
+             WHERE e.tenant_id = ? AND e.deleted_at IS NULL ORDER BY e.start_time DESC",
             [$tenantId]
         );
 
@@ -93,7 +93,7 @@ class AdminController
     public function eventEditor(string $id = null): string
     {
         $tenantId = $_SESSION['tenant_id'] ?? 0;
-        $event = $id ? Database::fetch('SELECT * FROM events WHERE id = ? AND tenant_id = ?', [$id, $tenantId]) : null;
+        $event = $id ? Database::fetch('SELECT * FROM events WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL', [$id, $tenantId]) : null;
         $venues = Database::fetchAll('SELECT * FROM venues WHERE tenant_id = ?', [$tenantId]);
         $categories = Database::fetchAll('SELECT * FROM ticket_categories WHERE tenant_id = ? ORDER BY price_cents', [$tenantId]);
 
@@ -328,13 +328,17 @@ class AdminController
     }
 
     /**
-     * POST /admin/events/{id}/delete — soft-delete via status='cancelled' (schema belum punya deleted_at di events).
+     * POST /admin/events/{id}/delete — soft-delete: set deleted_at + status='cancelled'.
+     * Event yang sudah punya tiket terjual tetap aman (data order tidak dihapus).
      */
     public function eventDelete(string $id): never
     {
         $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
-        Database::update('events', ['status' => 'cancelled'], 'id = ? AND tenant_id = ?', [(int)$id, $tenantId]);
-        Session::flash('Event dibatalkan', 'success');
+        Database::update('events',
+            ['status' => 'cancelled', 'deleted_at' => date('Y-m-d H:i:s')],
+            'id = ? AND tenant_id = ?', [(int)$id, $tenantId]
+        );
+        Session::flash('Event dihapus', 'success');
         Router::redirect('/admin/events');
     }
 
@@ -674,7 +678,7 @@ class AdminController
                        WHERE t.event_id = e.id AND o2.status = 'paid' AND t.status = 'used') AS tickets_used
              FROM events e
              LEFT JOIN orders o ON e.id = o.event_id AND o.status = 'paid' {$filter['orderDateSql']}
-             WHERE e.tenant_id = ?
+             WHERE e.tenant_id = ? AND e.deleted_at IS NULL
              GROUP BY e.id
              ORDER BY e.start_time DESC",
             array_merge($filter['orderDateParams'], [$tenantId])
@@ -763,7 +767,7 @@ class AdminController
                        WHERE t.event_id = e.id AND o2.status = 'paid' AND t.status = 'used') AS tickets_used
              FROM events e
              LEFT JOIN orders o ON e.id = o.event_id AND o.status = 'paid' {$filter['orderDateSql']}
-             WHERE e.tenant_id = ?
+             WHERE e.tenant_id = ? AND e.deleted_at IS NULL
              GROUP BY e.id
              ORDER BY e.start_time DESC",
             array_merge($filter['orderDateParams'], [$tenantId])
@@ -1009,6 +1013,17 @@ class AdminController
                 if ($primaryColor !== '') $branding['primary_color'] = $primaryColor;
                 if ($emailFrom !== '')    $branding['email_from'] = $emailFrom;
                 if ($replyTo !== '')      $branding['reply_to'] = $replyTo;
+
+                // Judul situs & footer: boleh dikosongkan (= reset ke default Visi).
+                // Field di-submit selalu ada, jadi simpan apa adanya / hapus key bila kosong.
+                foreach (['site_title', 'footer_text'] as $textField) {
+                    $val = trim((string)($_POST[$textField] ?? ''));
+                    if ($val !== '') {
+                        $branding[$textField] = $val;
+                    } else {
+                        unset($branding[$textField]);
+                    }
+                }
 
                 // Upload logo (opsional). Simpan ke /uploads/branding/, validasi tipe & ukuran.
                 if (!empty($_FILES['logo']['name']) && ($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
@@ -1339,7 +1354,7 @@ class AdminController
             : null;
 
         $events = Database::fetchAll(
-            "SELECT id, title FROM events WHERE tenant_id = ? AND status <> 'cancelled' ORDER BY start_time DESC",
+            "SELECT id, title FROM events WHERE tenant_id = ? AND status <> 'cancelled' AND deleted_at IS NULL ORDER BY start_time DESC",
             [$tenantId]
         );
 
@@ -1428,3 +1443,4 @@ class AdminController
         Router::redirect('/admin/promotions');
     }
 }
+

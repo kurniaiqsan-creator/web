@@ -62,7 +62,9 @@ CREATE TABLE events (
     settings JSON NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
     INDEX idx_tenant_start (tenant_id, start_time),
+    INDEX idx_tenant_deleted (tenant_id, deleted_at),
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
