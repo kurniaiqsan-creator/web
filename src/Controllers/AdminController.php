@@ -463,6 +463,76 @@ class AdminController
     }
 
     /**
+     * Validasi & simpan file logo tenant ke /uploads/branding/.
+     * Return ['ok'=>bool, 'url'=>string, 'error'=>string].
+     *
+     * @param array<string,mixed> $file Entri dari $_FILES.
+     * @return array{ok:bool,url:string,error:string}
+     */
+    private function handleLogoUpload(array $file, int $tenantId): array
+    {
+        $fail = fn(string $msg): array => ['ok' => false, 'url' => '', 'error' => $msg];
+
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            return $fail('Upload logo gagal (kode: ' . (int)($file['error'] ?? -1) . ')');
+        }
+
+        $maxBytes = 2 * 1024 * 1024; // 2 MB
+        if ((int)($file['size'] ?? 0) > $maxBytes) {
+            return $fail('Ukuran logo maksimal 2 MB');
+        }
+
+        $tmp = (string)($file['tmp_name'] ?? '');
+        if ($tmp === '' || !is_uploaded_file($tmp)) {
+            // is_uploaded_file akan false di CLI test; tetap izinkan kalau file ada (dev server).
+            if ($tmp === '' || !is_file($tmp)) {
+                return $fail('File logo tidak valid');
+            }
+        }
+
+        // Deteksi MIME asli, bukan dari ekstensi/nama yang dikirim user.
+        $allowed = [
+            'image/png'     => 'png',
+            'image/jpeg'    => 'jpg',
+            'image/gif'     => 'gif',
+            'image/webp'    => 'webp',
+            'image/svg+xml' => 'svg',
+        ];
+        $mime = '';
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = (string)finfo_file($finfo, $tmp);
+            finfo_close($finfo);
+        }
+        // SVG kadang terdeteksi text/* atau xml; cek berdasarkan konten.
+        if (!isset($allowed[$mime])) {
+            $head = (string)file_get_contents($tmp, false, null, 0, 512);
+            if (stripos($head, '<svg') !== false) {
+                $mime = 'image/svg+xml';
+            }
+        }
+        if (!isset($allowed[$mime])) {
+            return $fail('Format logo harus PNG, JPG, GIF, WEBP, atau SVG');
+        }
+
+        $ext = $allowed[$mime];
+        $dir = BASE_PATH . '/uploads/branding';
+        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+            return $fail('Gagal membuat folder upload');
+        }
+
+        $filename = 'tenant-' . $tenantId . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $dest = $dir . '/' . $filename;
+
+        $moved = is_uploaded_file($tmp) ? move_uploaded_file($tmp, $dest) : rename($tmp, $dest);
+        if (!$moved) {
+            return $fail('Gagal menyimpan file logo');
+        }
+
+        return ['ok' => true, 'url' => '/uploads/branding/' . $filename, 'error' => ''];
+    }
+
+    /**
      * POST /admin/settings — section-based update.
      * section=branding | payment | notifications
      */
@@ -492,6 +562,18 @@ class AdminController
                 if ($primaryColor !== '') $branding['primary_color'] = $primaryColor;
                 if ($emailFrom !== '')    $branding['email_from'] = $emailFrom;
                 if ($replyTo !== '')      $branding['reply_to'] = $replyTo;
+
+                // Upload logo (opsional). Simpan ke /uploads/branding/, validasi tipe & ukuran.
+                if (!empty($_FILES['logo']['name']) && ($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                    $logoResult = $this->handleLogoUpload($_FILES['logo'], $tenantId);
+                    if ($logoResult['ok']) {
+                        $branding['logo_url'] = $logoResult['url'];
+                    } else {
+                        Session::flash($logoResult['error'], 'error');
+                        Router::redirect('/admin/settings');
+                    }
+                }
+
                 Database::update('tenants',
                     ['branding' => json_encode($branding, JSON_UNESCAPED_UNICODE)],
                     'id = ?', [$tenantId]

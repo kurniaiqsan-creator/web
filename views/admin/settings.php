@@ -12,7 +12,7 @@ $mask = fn(string $val): string => $val === '' ? '' : '••••••••�
     <div class="row g-4">
         <!-- Branding -->
         <div class="col-lg-6">
-            <form method="post" action="<?= base_url('/admin/settings') ?>" class="card">
+            <form method="post" action="<?= base_url('/admin/settings') ?>" class="card" enctype="multipart/form-data">
                 <input type="hidden" name="section" value="branding">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0"><i class="cil-brush me-2"></i>Branding</h5>
@@ -21,6 +21,17 @@ $mask = fn(string $val): string => $val === '' ? '' : '••••••••�
                 <div class="card-body">
                     <div class="mb-3"><label class="form-label">Nama Tenant</label>
                         <input class="form-control" name="name" value="<?= View::e($tenant['name'] ?? '') ?>"></div>
+                    <div class="mb-3">
+                        <label class="form-label">Logo</label>
+                        <?php if (!empty($branding['logo_url'])): ?>
+                            <div class="mb-2">
+                                <img src="<?= base_url(View::e($branding['logo_url'])) ?>" alt="Logo tenant"
+                                     class="rounded border bg-body p-2" style="max-height:64px;max-width:200px;object-fit:contain">
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" class="form-control" name="logo" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+                        <div class="form-text">PNG, JPG, GIF, WEBP, atau SVG. Maks 2 MB.</div>
+                    </div>
                     <div class="mb-3"><label class="form-label">Warna Brand</label>
                         <div class="input-group">
                             <input type="color" class="form-control form-control-color" name="primary_color"

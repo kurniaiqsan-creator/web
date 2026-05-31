@@ -19,6 +19,32 @@ class Branding
     private static bool $cacheLoaded = false;
 
     /**
+     * Ambil URL logo tenant (atau '' jika tidak ada).
+     * Bila $tenant null, fallback ke tenant pada session (admin area).
+     */
+    public static function logoUrl(?array $tenant = null): string
+    {
+        $branding = self::resolveBranding($tenant);
+        $logo = isset($branding['logo_url']) ? trim((string)$branding['logo_url']) : '';
+        return $logo;
+    }
+
+    /** Nama tenant aktif dari session (admin area), atau '' jika tidak ada. */
+    public static function tenantName(): string
+    {
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+        if ($tenantId <= 0) {
+            return '';
+        }
+        try {
+            $row = Database::fetch('SELECT name FROM tenants WHERE id = ?', [$tenantId]);
+            return (string)($row['name'] ?? '');
+        } catch (Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
      * Hasilkan <style> override untuk tenant tertentu.
      * Bila $tenant null, fallback ke tenant pada session (admin area).
      */

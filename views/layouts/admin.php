@@ -51,11 +51,17 @@ $isActive = function (string $href) use ($currentPath): bool {
 
 <div class="sidebar sidebar-dark sidebar-fixed border-end" id="sidebar">
     <div class="sidebar-header border-bottom">
+        <?php $adminLogo = Branding::logoUrl(); $adminTenantName = Branding::tenantName(); ?>
         <a class="sidebar-brand d-flex align-items-center gap-2 px-3" href="<?= base_url('/admin/dashboard') ?>">
-            <span class="brand-mark d-inline-flex align-items-center justify-content-center rounded-circle"
-                  style="width:32px;height:32px;font-weight:700">V</span>
-            <span class="sidebar-brand-full fs-5 fw-semibold">Visi Admin</span>
-            <span class="sidebar-brand-narrow fs-5 fw-bold">V</span>
+            <?php if ($adminLogo !== ''): ?>
+                <img src="<?= base_url(View::e($adminLogo)) ?>" alt="Logo" class="sidebar-brand-full" style="max-height:32px;max-width:150px;object-fit:contain">
+                <span class="sidebar-brand-narrow"><img src="<?= base_url(View::e($adminLogo)) ?>" alt="Logo" style="max-height:32px;max-width:32px;object-fit:contain"></span>
+            <?php else: ?>
+                <span class="brand-mark d-inline-flex align-items-center justify-content-center rounded-circle"
+                      style="width:32px;height:32px;font-weight:700"><?= View::e(strtoupper(substr($adminTenantName !== '' ? $adminTenantName : 'V', 0, 1))) ?></span>
+                <span class="sidebar-brand-full fs-5 fw-semibold"><?= View::e($adminTenantName !== '' ? $adminTenantName : 'Visi Admin') ?></span>
+                <span class="sidebar-brand-narrow fs-5 fw-bold"><?= View::e(strtoupper(substr($adminTenantName !== '' ? $adminTenantName : 'V', 0, 1))) ?></span>
+            <?php endif; ?>
         </a>
         <button class="btn-close d-lg-none ms-auto" type="button" aria-label="Tutup"
                 onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()"

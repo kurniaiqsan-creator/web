@@ -16,9 +16,14 @@
     <header class="border-bottom bg-body sticky-top">
         <div class="container-lg d-flex align-items-center justify-content-between" style="height:56px">
             <a href="<?= base_url('/') ?>" class="d-flex align-items-center gap-2 text-decoration-none text-body">
-                <span class="brand-mark d-inline-flex align-items-center justify-content-center rounded-circle fw-bold"
-                      style="width:32px;height:32px">V</span>
-                <span class="fs-5 fw-semibold">Visi</span>
+                <?php $mainLogo = Branding::logoUrl($tenant ?? null); ?>
+                <?php if ($mainLogo !== ''): ?>
+                    <img src="<?= base_url(View::e($mainLogo)) ?>" alt="Logo" style="max-height:32px;max-width:150px;object-fit:contain">
+                <?php else: ?>
+                    <span class="brand-mark d-inline-flex align-items-center justify-content-center rounded-circle fw-bold"
+                          style="width:32px;height:32px">V</span>
+                    <span class="fs-5 fw-semibold"><?= View::e($tenant['name'] ?? 'Visi') ?></span>
+                <?php endif; ?>
             </a>
 
             <div class="d-flex align-items-center gap-2">

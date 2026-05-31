@@ -23,6 +23,15 @@ if (str_starts_with($path, '/assets/') && is_file($assetsFile)) {
     return true;
 }
 
+// Serve user uploads (mis. logo tenant) dari root /uploads/.
+if (str_starts_with($path, '/uploads/') && is_file($assetsFile)) {
+    $ext = pathinfo($assetsFile, PATHINFO_EXTENSION);
+    $types = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'svg' => 'image/svg+xml', 'webp' => 'image/webp'];
+    header('Content-Type: ' . ($types[strtolower($ext)] ?? 'application/octet-stream'));
+    readfile($assetsFile);
+    return true;
+}
+
 // Rewrite to index.php
 $_GET['url'] = $path;
 require __DIR__ . '/public/index.php';
