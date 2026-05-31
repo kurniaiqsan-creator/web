@@ -29,8 +29,8 @@ Stack saat ini: PHP 8.1 (no framework, custom MVC), MariaDB 10.6, CoreUI Bootstr
 - [x] **DONE** — Auth + session (login/logout) + middleware `authMiddleware`, `adminMiddleware`, `tenantMiddleware` (`src/Controllers/AuthController.php`, `public/index.php`).
 - [x] **DONE** — Onboarding publik di-disable → redirect `/onboarding` ke `/login` (Path A).
 - [x] **DONE** — Flash message helper (`src/Session.php` `flash()` / `consumeFlash()`), dipakai oleh semua admin form save.
-- [ ] **TODO** — `.env` loader resmi (sekarang baca via `getenv()` langsung). Goal: file `.env` di-load otomatis untuk `DB_*`, `APP_BASE_URL`, key PG, SMTP, Twilio.
-- [ ] **TODO** — Migrasi tooling (sekarang ada `database/migrations/001_add_customer_to_orders.sql` tapi belum ada runner). Goal: `php migrate.php up` atau sejenis.
+- [x] **DONE** — `.env` loader resmi (`src/Env.php`, di-load di `public/index.php` sebelum config). Mendukung quote, escape, interpolasi `${VAR}`, dan tidak menimpa env OS. Template di `.env.example`.
+- [x] **DONE** — Migrasi tooling: `php migrate.php up` / `php migrate.php status`. Riwayat di tabel `schema_migrations`, baca `database/migrations/*.sql` urut natural. Migration 001 dibuat idempotent (cek `information_schema`).
 - [ ] **TODO** — Tooling lint/test (PHPStan/Psalm + PHPUnit). Sekarang nol.
 - [ ] **TODO** — CI (GitHub Actions): lint + test on PR. Sekarang nol.
 - [ ] **TODO** — Audit log viewer di admin (table `webhook_logs` ada; perlu page `/admin/logs`).

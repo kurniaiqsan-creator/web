@@ -5,17 +5,6 @@ declare(strict_types=1);
 define('BASE_PATH', dirname(__DIR__));
 define('VIEW_PATH', BASE_PATH . '/views');
 define('CONFIG_PATH', BASE_PATH . '/config');
-define('BASE_URL', rtrim((string)(getenv('APP_BASE_URL') ?: ''), '/'));
-
-if (!function_exists('base_url')) {
-    function base_url(string $path = ''): string
-    {
-        if ($path === '') {
-            return BASE_URL === '' ? '/' : BASE_URL;
-        }
-        return BASE_URL . '/' . ltrim($path, '/');
-    }
-}
 
 // Autoload sederhana
 spl_autoload_register(function (string $class): void {
@@ -33,6 +22,25 @@ spl_autoload_register(function (string $class): void {
         }
     }
 });
+
+// Muat .env (jika ada) sebelum apa pun yang membaca getenv() (BASE_URL & config).
+Env::load(BASE_PATH . '/.env');
+
+// BASE_URL bisa sudah didefinisikan oleh root index.php (akses via subdirectory).
+// Kalau belum, ambil dari APP_BASE_URL (yang kini bisa berasal dari .env).
+if (!defined('BASE_URL')) {
+    define('BASE_URL', rtrim((string)(getenv('APP_BASE_URL') ?: ''), '/'));
+}
+
+if (!function_exists('base_url')) {
+    function base_url(string $path = ''): string
+    {
+        if ($path === '') {
+            return BASE_URL === '' ? '/' : BASE_URL;
+        }
+        return BASE_URL . '/' . ltrim($path, '/');
+    }
+}
 
 // Muat config
 $appConfig = require CONFIG_PATH . '/app.php';
