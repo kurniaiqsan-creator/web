@@ -217,9 +217,34 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Kategori Tiket</h5>
-                <a href="<?= base_url('/admin/ticket-categories') ?>" class="btn btn-outline-primary btn-sm"><i class="cil-plus me-1"></i>Kelola Kategori</a>
+                <button type="button" class="btn btn-outline-primary btn-sm" @click="showCatForm = !showCatForm">
+                    <i class="cil-plus me-1"></i>Tambah Kategori
+                </button>
             </div>
             <div class="card-body">
+                <!-- Inline create (AJAX, tidak reload halaman / tidak ganggu form event) -->
+                <div class="border rounded p-3 mb-3 bg-body-tertiary" x-show="showCatForm" x-cloak>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label small mb-1">Nama Kategori</label>
+                            <input type="text" class="form-control form-control-sm" x-model="newCat.name" placeholder="mis. VIP" @keydown.enter.prevent="createCategory()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small mb-1">Harga (Rp)</label>
+                            <input type="number" min="0" class="form-control form-control-sm" x-model="newCat.price" placeholder="0">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">Kuota</label>
+                            <input type="number" min="0" class="form-control form-control-sm" x-model="newCat.quota" placeholder="0">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-primary btn-sm w-100" @click="createCategory()" :disabled="catSaving">
+                                <span x-text="catSaving ? '...' : 'Simpan'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row g-3">
                     <?php foreach ($categories as $c): ?>
                         <div class="col-md-6">
@@ -232,7 +257,20 @@
                             </div>
                         </div>
                     <?php endforeach; ?>
+                    <!-- Kategori baru hasil inline-create muncul di sini -->
+                    <template x-for="c in addedCats" :key="c.id">
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 border-primary">
+                                <div class="row g-2">
+                                    <div class="col-4"><div class="text-medium-emphasis small">Nama</div><div class="fw-semibold" x-text="c.name"></div></div>
+                                    <div class="col-4"><div class="text-medium-emphasis small">Harga</div><div class="fw-semibold" x-text="'Rp' + c.price_cents.toLocaleString('id-ID')"></div></div>
+                                    <div class="col-4"><div class="text-medium-emphasis small">Kuota</div><div class="fw-semibold" x-text="c.quota"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
+                <p class="small text-medium-emphasis mt-3 mb-0">Untuk edit/hapus kategori, buka <a href="<?= base_url('/admin/ticket-categories') ?>">Tiket &amp; Harga</a>. Kategori baru bisa langsung dipakai setelah simpan event.</p>
             </div>
         </div>
     </div>
@@ -276,6 +314,10 @@ function eventEditor() {
         },
         layoutSeats: [], selectedSeats: [], bulkCategory: '', canvasWidth: 340, canvasHeight: 220,
         layoutJson: '[]',
+        showCatForm: false,
+        newCat: { name: '', price: '', quota: '' },
+        catSaving: false,
+        addedCats: [],
         gaTiers: {},      // { [categoryId]: {quota, sold, held} }
         gaTiersJson: '[]',
 
@@ -355,7 +397,34 @@ function eventEditor() {
             if (!this.bulkCategory) return;
             this.layoutSeats.forEach(s => { if (this.selectedSeats.includes(s.label)) s.category_id = parseInt(this.bulkCategory); });
             showToast('Kategori diubah');
-        },        bulkStatus(status) {
+        },
+        async createCategory() {
+            const name = (this.newCat.name || '').trim();
+            if (!name) return showToast('Nama kategori wajib diisi', 'warning');
+            this.catSaving = true;
+            try {
+                const res = await fetch(base_url('/admin/ticket-categories/quick'), {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: name,
+                        price_cents: parseInt(this.newCat.price) || 0,
+                        quota: parseInt(this.newCat.quota) || 0,
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Gagal membuat kategori', 'error'); this.catSaving = false; return; }
+                this.addedCats.push(data);
+                // Tambahkan ke dropdown kategori (seat-map) & tier GA secara live.
+                this.gaTiers[data.id] = { quota: data.quota, sold: 0, held: 0 };
+                this.newCat = { name: '', price: '', quota: '' };
+                this.showCatForm = false;
+                showToast('Kategori "' + data.name + '" dibuat', 'success');
+            } catch (e) {
+                showToast('Gagal membuat kategori', 'error');
+            }
+            this.catSaving = false;
+        },
+        bulkStatus(status) {
             this.layoutSeats.forEach(s => { if (this.selectedSeats.includes(s.label) && s.status !== 'sold') s.status = status; });
             this.selectedSeats = []; this.layoutSeats.forEach(s => s.selected = false);
             showToast('Status diubah');

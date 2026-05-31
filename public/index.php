@@ -147,6 +147,7 @@ $router->group('/admin', function (Router $r) {
     // Ticket categories
     $r->get('/ticket-categories', [AdminController::class, 'ticketCategories']);
     $r->post('/ticket-categories', [AdminController::class, 'ticketCategorySave']);
+    $r->post('/ticket-categories/quick', [AdminController::class, 'ticketCategoryQuickCreate']);
     $r->post('/ticket-categories/{id}', [AdminController::class, 'ticketCategorySave']);
     $r->post('/ticket-categories/{id}/delete', [AdminController::class, 'ticketCategoryDelete']);
 

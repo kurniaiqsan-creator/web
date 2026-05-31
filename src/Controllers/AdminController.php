@@ -1318,6 +1318,44 @@ class AdminController
         Router::redirect('/admin/ticket-categories');
     }
 
+    /**
+     * POST /admin/ticket-categories/quick — buat kategori cepat (JSON), dipakai
+     * inline dari event editor tanpa pindah halaman.
+     */
+    public function ticketCategoryQuickCreate(): string
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
+
+        $body = json_decode((string)file_get_contents('php://input'), true) ?: [];
+        $name  = trim((string)($body['name'] ?? ''));
+        $price = (int)($body['price_cents'] ?? 0);
+        $quota = (int)($body['quota'] ?? 0);
+
+        if ($name === '') {
+            http_response_code(422);
+            return json_encode(['error' => 'Nama kategori wajib diisi']);
+        }
+        if ($price < 0 || $quota < 0) {
+            http_response_code(422);
+            return json_encode(['error' => 'Harga & kuota tidak boleh negatif']);
+        }
+
+        $id = Database::insert('ticket_categories', [
+            'tenant_id'   => $tenantId,
+            'name'        => $name,
+            'price_cents' => $price,
+            'quota'       => $quota,
+        ]);
+
+        return json_encode([
+            'id'          => $id,
+            'name'        => $name,
+            'price_cents' => $price,
+            'quota'       => $quota,
+        ]);
+    }
+
     public function ticketCategoryDelete(string $id): never
     {
         $tenantId = (int)($_SESSION['tenant_id'] ?? 0);
