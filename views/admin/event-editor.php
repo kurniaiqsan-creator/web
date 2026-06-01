@@ -118,7 +118,7 @@
                             </template>
                         </svg>
                     </div>
-                    <div class="text-center py-2 bg-light rounded-bottom text-uppercase small fw-semibold text-medium-emphasis">Panggung</div>
+                    <div class="text-center py-2 bg-body-tertiary rounded-bottom text-uppercase small fw-semibold text-medium-emphasis">Panggung</div>
                 </div>
             </div>
 
@@ -129,7 +129,7 @@
                     <div class="card-body">
                         <template x-if="selectedSeats.length === 1">
                             <div>
-                                <div class="text-center bg-light rounded p-3 mb-3">
+                                <div class="text-center bg-body-tertiary rounded p-3 mb-3">
                                     <div class="text-medium-emphasis small">Kursi</div>
                                     <div class="fs-3 fw-bold" x-text="selectedSeats[0]"></div>
                                 </div>
@@ -159,9 +159,9 @@
                     <div class="card-header"><h5 class="card-title mb-0">Ringkasan</h5></div>
                     <div class="card-body">
                         <div class="row g-2 text-center small">
-                            <div class="col-4"><div class="bg-light rounded p-2"><div class="fw-bold" x-text="layoutSeats.filter(s=>s.status==='available').length"></div><div class="text-medium-emphasis">Tersedia</div></div></div>
-                            <div class="col-4"><div class="bg-light rounded p-2"><div class="fw-bold text-danger" x-text="layoutSeats.filter(s=>s.status==='sold').length"></div><div class="text-medium-emphasis">Terjual</div></div></div>
-                            <div class="col-4"><div class="bg-light rounded p-2"><div class="fw-bold" x-text="layoutSeats.length"></div><div class="text-medium-emphasis">Total</div></div></div>
+                            <div class="col-4"><div class="bg-body-tertiary rounded p-2"><div class="fw-bold" x-text="layoutSeats.filter(s=>s.status==='available').length"></div><div class="text-medium-emphasis">Tersedia</div></div></div>
+                            <div class="col-4"><div class="bg-body-tertiary rounded p-2"><div class="fw-bold text-danger" x-text="layoutSeats.filter(s=>s.status==='sold').length"></div><div class="text-medium-emphasis">Terjual</div></div></div>
+                            <div class="col-4"><div class="bg-body-tertiary rounded p-2"><div class="fw-bold" x-text="layoutSeats.length"></div><div class="text-medium-emphasis">Total</div></div></div>
                         </div>
                     </div>
                 </div>

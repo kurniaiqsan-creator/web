@@ -111,9 +111,9 @@ $mask = fn(string $val): string => $val === '' ? '' : '••••••••�
                 <div class="card-body">
                     <p class="text-medium-emphasis small mb-3">Pelacakan usage belum diaktifkan. <a href="<?= base_url('/admin/reports') ?>">Lihat laporan</a>.</p>
                     <div class="row g-3">
-                        <div class="col-4"><div class="bg-light rounded p-3 text-center"><div class="fs-4 fw-bold">—</div><div class="text-medium-emphasis small">Email</div></div></div>
-                        <div class="col-4"><div class="bg-light rounded p-3 text-center"><div class="fs-4 fw-bold">—</div><div class="text-medium-emphasis small">SMS</div></div></div>
-                        <div class="col-4"><div class="bg-light rounded p-3 text-center"><div class="fs-4 fw-bold">—</div><div class="text-medium-emphasis small">QR</div></div></div>
+                        <div class="col-4"><div class="bg-body-tertiary rounded p-3 text-center"><div class="fs-4 fw-bold">—</div><div class="text-medium-emphasis small">Email</div></div></div>
+                        <div class="col-4"><div class="bg-body-tertiary rounded p-3 text-center"><div class="fs-4 fw-bold">—</div><div class="text-medium-emphasis small">SMS</div></div></div>
+                        <div class="col-4"><div class="bg-body-tertiary rounded p-3 text-center"><div class="fs-4 fw-bold">—</div><div class="text-medium-emphasis small">QR</div></div></div>
                     </div>
                 </div>
             </div>
