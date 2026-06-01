@@ -8,80 +8,99 @@ $statusMap = [
     'cancelled' => ['Dibatalkan', 'text-bg-secondary'],
     'refunded'  => ['Refund', 'text-bg-info'],
 ];
+
+// Inisial avatar + handle dari email.
+$nameParts = preg_split('/\s+/', trim((string)$customer['name'])) ?: [];
+$initials  = strtoupper(substr($nameParts[0] ?? 'U', 0, 1) . (isset($nameParts[1]) ? substr($nameParts[1], 0, 1) : ''));
+$handle    = '@' . preg_replace('/[^a-z0-9_.]/', '', strtolower(explode('@', (string)$customer['email'])[0]));
 ?>
-<div class="container-lg py-4" style="max-width:48rem">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-        <div>
-            <h1 class="h3 fw-bold mb-1">Akun Saya</h1>
-            <p class="small text-medium-emphasis mb-0">
-                <?= View::e($customer['name']) ?> · <?= View::e($customer['email']) ?>
-                <?php if (!empty($customer['phone'])): ?> · <?= View::e($customer['phone']) ?><?php endif; ?>
-            </p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="<?= base_url('/events') ?>" class="btn btn-outline-primary btn-sm">
-                <i class="cil-loop me-1"></i>Lihat Event
-            </a>
-            <a href="<?= base_url('/keluar') ?>" class="btn btn-outline-secondary btn-sm">
-                <i class="cil-account-logout me-1"></i>Keluar
+<div class="container-lg py-4" x-data>
+
+    <!-- Header profil -->
+    <div class="card mb-4">
+        <div class="card-body d-flex flex-column flex-sm-row align-items-sm-center gap-3">
+            <div class="flex-shrink-0"><?= View::avatarHtml($customer['avatar_url'] ?? null, $initials, 64) ?></div>
+            <div class="flex-grow-1">
+                <h1 class="h3 fw-bold mb-1"><?= View::e($customer['name']) ?></h1>
+                <div class="text-medium-emphasis">
+                    <?= View::e($handle) ?> · <?= View::e($customer['email']) ?>
+                    <?php if (!empty($customer['phone'])): ?> · <?= View::e($customer['phone']) ?><?php endif; ?>
+                </div>
+            </div>
+            <a href="<?= base_url('/akun/pengaturan') ?>" class="btn btn-outline-secondary">
+                <i class="cil-settings me-1"></i>Edit Profil
             </a>
         </div>
     </div>
 
-    <!-- Edit Profil -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h2 class="h6 fw-semibold mb-0"><i class="cil-user me-2"></i>Profil Saya</h2>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-coreui-toggle="collapse" data-coreui-target="#profileEdit" aria-expanded="false">
-                <i class="cil-pencil me-1"></i>Edit
-            </button>
-        </div>
-        <div class="collapse" id="profileEdit">
-            <div class="card-body">
-                <form method="post" action="<?= base_url('/akun/profil') ?>">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Nama</label>
-                            <input type="text" name="name" class="form-control" value="<?= View::e($customer['name']) ?>" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-control" value="<?= View::e($customer['email']) ?>" disabled>
-                            <div class="form-text">Email tidak bisa diubah.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Telepon</label>
-                            <input type="tel" name="phone" class="form-control" value="<?= View::e($customer['phone'] ?? '') ?>" placeholder="08xxxxxxxxxx">
-                        </div>
+    <!-- Statistik (data nyata) -->
+    <div class="row g-3 mb-4">
+        <?php
+        $statCards = [
+            ['🎫', (string)$stats['orders'], 'Pesanan'],
+            ['🎟️', (string)$stats['tickets'], 'Tiket'],
+            ['✅', (string)$stats['paid'], 'Lunas'],
+        ];
+        foreach ($statCards as [$ic, $num, $lbl]): ?>
+            <div class="col-6 col-lg-3">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="fs-3"><?= $ic ?></div>
+                        <div class="h3 fw-bold text-primary mb-0"><?= View::e($num) ?></div>
+                        <div class="small text-medium-emphasis"><?= View::e($lbl) ?></div>
                     </div>
-
-                    <hr class="my-4">
-                    <p class="small text-medium-emphasis mb-3">Ganti password (kosongkan jika tidak ingin mengubah).</p>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Password Saat Ini</label>
-                            <input type="password" name="current_password" class="form-control" autocomplete="current-password">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Password Baru</label>
-                            <input type="password" name="new_password" class="form-control" autocomplete="new-password">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Konfirmasi</label>
-                            <input type="password" name="new_password_confirm" class="form-control" autocomplete="new-password">
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-primary"><i class="cil-save me-1"></i>Simpan Perubahan</button>
-                    </div>
-                </form>
+                </div>
+            </div>
+        <?php endforeach; ?>
+        <div class="col-6 col-lg-3">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="fs-3">❤️</div>
+                    <div class="h3 fw-bold text-primary mb-0" x-text="$store.ev.all.filter(e => $store.ev.isSaved(e.id)).length"></div>
+                    <div class="small text-medium-emphasis">Tersimpan</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <h2 class="h6 fw-semibold mb-3">Riwayat Pesanan (<?= count($orders) ?>)</h2>
+    <!-- Event yang Kamu Simpan (wishlist) -->
+    <h2 class="h4 fw-bold mb-3">Event yang Kamu Simpan</h2>
+    <div class="row g-3 mb-2" x-show="$store.ev.all.filter(e => $store.ev.isSaved(e.id)).length > 0">
+        <template x-for="ev in $store.ev.all.filter(e => $store.ev.isSaved(e.id))" :key="ev.id">
+            <div class="col-sm-6 col-lg-4">
+                <div class="card h-100 event-card position-relative" role="button" @click="$store.ev.open(ev.id)" style="cursor:pointer">
+                    <button type="button" class="event-save-btn" @click.stop="$store.ev.toggleSave(ev.id)" aria-label="Hapus dari tersimpan">
+                        <span x-text="$store.ev.isSaved(ev.id) ? '❤️' : '🤍'"></span>
+                    </button>
+                    <div class="event-card-cover" :style="ev.cover ? `background-image:url('${ev.cover}');background-size:cover;background-position:center` : `background:${ev.color}`">
+                        <span class="event-card-emoji" x-show="!ev.cover" x-text="ev.emoji"></span>
+                        <span class="badge event-card-badge" x-text="ev.catLabel"></span>
+                        <span class="badge visi-dist-badge" x-show="$store.ev.distanceLabel(ev)" x-text="'📍 ' + $store.ev.distanceLabel(ev)"></span>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="h6 fw-semibold mb-1" x-text="ev.title"></h3>
+                        <div class="small text-medium-emphasis mb-1" x-show="ev.date"><i class="cil-calendar me-1"></i><span x-text="ev.date"></span></div>
+                        <div class="small text-medium-emphasis"><i class="cil-location-pin me-1"></i><span x-text="ev.venue"></span></div>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pt-0 pb-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-primary" x-text="ev.priceShort || 'Lihat detail'"></span>
+                        <span class="small fw-semibold text-primary">Detail →</span>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    <div class="card mb-2" x-show="$store.ev.all.filter(e => $store.ev.isSaved(e.id)).length === 0">
+        <div class="card-body text-center text-medium-emphasis p-4">
+            <div class="fs-1 mb-2">🤍</div>
+            <div class="fw-semibold">Belum ada event tersimpan</div>
+            <div class="small mb-3">Simpan event favoritmu agar tidak terlewat!</div>
+            <a href="<?= base_url('/events') ?>" class="btn btn-outline-primary btn-sm">Jelajahi Event</a>
+        </div>
+    </div>
 
+    <!-- Riwayat Pesanan -->
+    <h2 class="h4 fw-bold mt-5 mb-3">Riwayat Pesanan (<?= count($orders) ?>)</h2>
     <?php if (empty($orders)): ?>
         <div class="card">
             <div class="card-body text-center p-5">
@@ -144,4 +163,7 @@ $statusMap = [
         </div>
     <?php endif; ?>
 </div>
+
+<script>window.__PUBLIC_EVENTS__ = <?= json_encode($cards, JSON_UNESCAPED_UNICODE) ?>;</script>
+<?php require VIEW_PATH . '/public/_event_modal.php'; ?>
 <?php $content = ob_get_clean(); require VIEW_PATH . '/layouts/main.php'; ?>

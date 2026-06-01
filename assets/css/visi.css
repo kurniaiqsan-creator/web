@@ -203,3 +203,242 @@ body {
   color: #fff;
   font-weight: 500;
 }
+
+/* Cegah kedip konten Alpine sebelum komponen siap. */
+[x-cloak] { display: none !important; }
+
+/* ===== Discovery /events (search, chips, kartu) ===== */
+.event-chip {
+  border: 1px solid var(--cui-border-color);
+  background: var(--cui-body-bg);
+  color: var(--cui-body-color);
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.event-chip.active {
+  background: var(--cui-primary);
+  border-color: var(--cui-primary);
+  color: #fff;
+}
+
+.event-card {
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--cui-box-shadow, 0 0.5rem 1rem rgba(0, 0, 0, 0.15));
+}
+.event-card-cover {
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.event-card-emoji { font-size: 2.25rem; line-height: 1; }
+.event-card-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #1a1033;
+  font-weight: 700;
+}
+.event-save-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.event-save-btn:hover { background: #fff; }
+
+/* Hero beranda — gradient brand, kontras putih. */
+.visi-hero {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--cui-primary) 78%, #000) 0%,
+    var(--cui-primary) 55%,
+    color-mix(in srgb, var(--cui-primary) 70%, #fff) 100%);
+  border-radius: 1.5rem;
+}
+.visi-hero-decor {
+  position: absolute;
+  top: -1.5rem;
+  right: 0.5rem;
+  font-size: 11rem;
+  line-height: 1;
+  opacity: 0.12;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Kartu kategori (tile) di beranda. */
+.event-cat-tile { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.event-cat-tile:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--cui-box-shadow, 0 0.5rem 1rem rgba(0, 0, 0, 0.15));
+}
+.event-cat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+
+/* Dropdown notifikasi (lonceng). */
+.visi-notif-menu { width: 320px; max-width: 92vw; }
+.visi-notif-list { max-height: 380px; overflow-y: auto; }
+.visi-notif-item:last-child { border-bottom: 0 !important; }
+.visi-notif-item:hover { background: var(--cui-tertiary-bg); }
+.visi-notif-item.is-unread { background: rgba(var(--cui-primary-rgb), 0.06); }
+
+/* Badge jarak pada cover kartu event. */
+.visi-dist-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #1a1033;
+  font-weight: 700;
+}
+
+/* ===== Modal quick-view event ===== */
+.visi-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.visi-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 16, 51, 0.55);
+  backdrop-filter: blur(4px);
+}
+.visi-modal-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  border-radius: 1.25rem;
+}
+.visi-modal-row { max-height: 90vh; }
+.visi-modal-card .col-md-7 { overflow-y: auto; }
+.visi-modal-cover {
+  position: relative;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.visi-modal-emoji { font-size: 5rem; line-height: 1; }
+.visi-modal-cover .event-card-badge { top: 16px; left: 16px; }
+.visi-modal-organizer {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  border-radius: 0.85rem;
+  padding: 0.75rem 0.9rem;
+}
+.visi-modal-ico {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--cui-tertiary-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+}
+@media (min-width: 768px) {
+  .visi-modal-cover { height: 100%; min-height: 420px; }
+}
+
+/* Sidebar filter /events */
+@media (min-width: 992px) {
+  .visi-filter-sidebar { position: sticky; top: 72px; }
+}
+.visi-side-item {
+  border: none;
+  border-radius: 0.6rem;
+  font-weight: 600;
+  color: var(--cui-body-color);
+  background: transparent;
+}
+.visi-side-item:hover { background: var(--cui-tertiary-bg); }
+.visi-side-item.active {
+  background: var(--cui-primary);
+  color: #fff;
+}
+.visi-side-item.active-soft {
+  background: rgba(var(--cui-primary-rgb), 0.12);
+  color: var(--cui-primary);
+}
+
+/* Avatar profil (inisial gradient atau foto). */
+.visi-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.35rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--cui-primary), #ff6b6b);
+  flex-shrink: 0;
+}
+.visi-avatar-photo {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* Nav pill header publik. */
+.visi-nav-pill {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  color: var(--cui-body-color);
+  white-space: nowrap;
+}
+.visi-nav-pill:hover { background: var(--cui-tertiary-bg); }
+.visi-nav-pill.active {
+  background: rgba(var(--cui-primary-rgb), 0.12);
+  color: var(--cui-primary);
+}
+
+/* Footer */
+.visi-footer-link {
+  color: var(--cui-secondary-color);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.visi-footer-link:hover { color: var(--cui-primary); }

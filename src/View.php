@@ -49,4 +49,38 @@ class View
     {
         return '/assets/' . ltrim($path, '/');
     }
+
+    /**
+     * Render avatar: foto bila ada `$url`, atau lingkaran gradient berisi inisial.
+     * Ukuran via inline style agar bisa dipakai di header (kecil) maupun profil (besar).
+     */
+    public static function avatarHtml(?string $url, string $initials, int $size = 40): string
+    {
+        $px = max(16, $size);
+        if ($url !== null && trim($url) !== '') {
+            $src = self::e(base_url($url));
+            return '<img src="' . $src . '" alt="Foto profil" class="visi-avatar-photo" '
+                 . 'style="width:' . $px . 'px;height:' . $px . 'px">';
+        }
+        $fs = max(10, (int)round($px * 0.4));
+        return '<span class="visi-avatar" style="width:' . $px . 'px;height:' . $px . 'px;font-size:' . $fs . 'px">'
+             . self::e($initials) . '</span>';
+    }
+
+    /**
+     * Daftar kategori event untuk discovery (filter chips + badge di /events).
+     * Disimpan di kolom events.settings->category (tanpa kolom DB baru).
+     * Key = nilai tersimpan; value = label, emoji, dan warna aksen kartu.
+     */
+    public static function eventCategories(): array
+    {
+        return [
+            'konser'    => ['label' => 'Konser',    'emoji' => '🎵', 'color' => '#5C3BFE'],
+            'workshop'  => ['label' => 'Workshop',  'emoji' => '💡', 'color' => '#FF6B6B'],
+            'festival'  => ['label' => 'Festival',  'emoji' => '🎪', 'color' => '#F59E0B'],
+            'komunitas' => ['label' => 'Komunitas', 'emoji' => '👥', 'color' => '#10B981'],
+            'olahraga'  => ['label' => 'Olahraga',  'emoji' => '⚽', 'color' => '#3B82F6'],
+            'lainnya'   => ['label' => 'Lainnya',   'emoji' => '📅', 'color' => '#6B7280'],
+        ];
+    }
 }

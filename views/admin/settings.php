@@ -27,6 +27,9 @@ $mask = fn(string $val): string => $val === '' ? '' : '••••••••�
                     <div class="mb-3"><label class="form-label">Teks Footer</label>
                         <input class="form-control" name="footer_text" value="<?= View::e($branding['footer_text'] ?? '') ?>" placeholder="Visi — Platform Tiket">
                         <div class="form-text">Tampil di footer setelah "© <?= date('Y') ?>".</div></div>
+                    <div class="mb-3"><label class="form-label">Tagline Footer</label>
+                        <textarea class="form-control" name="footer_tagline" rows="2" placeholder="Platform penemu event lokal terbaik. Temukan, simpan, dan ikuti event seru di sekitarmu."><?= View::e($branding['footer_tagline'] ?? '') ?></textarea>
+                        <div class="form-text">Deskripsi singkat di kolom brand pada footer.</div></div>
                     <div class="mb-3">
                         <label class="form-label">Logo</label>
                         <?php if (!empty($branding['logo_url'])): ?>

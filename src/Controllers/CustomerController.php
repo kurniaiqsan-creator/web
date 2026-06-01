@@ -35,6 +35,7 @@ class CustomerController
         $_SESSION['customer_name']      = $user['name'];
         $_SESSION['customer_email']     = $user['email'];
         $_SESSION['customer_tenant_id'] = (int)$user['tenant_id'];
+        $_SESSION['customer_avatar']    = $user['avatar_url'] ?? null;
     }
 
     // ===== LOGIN =====
@@ -181,6 +182,30 @@ class CustomerController
     }
 
     /**
+     * GET /akun/pengaturan — halaman pengaturan akun (form profil + password).
+     */
+    public function settings(): string
+    {
+        $tenant = $this->tenant();
+        if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
+
+        if (empty($_SESSION['customer_id']) || (int)$_SESSION['customer_tenant_id'] !== (int)$tenant['id']) {
+            Router::redirect('/login?next=' . urlencode('/akun/pengaturan'));
+        }
+
+        $customer = Database::fetch(
+            'SELECT id, name, email, phone, avatar_url FROM users WHERE id = ?',
+            [(int)$_SESSION['customer_id']]
+        );
+
+        return View::render('public/account-settings', [
+            'title'    => 'Pengaturan Akun — ' . $tenant['name'],
+            'tenant'   => $tenant,
+            'customer' => $customer,
+        ]);
+    }
+
+    /**
      * POST /akun/profil — update nama/telepon + ganti password opsional.
      */
     public function profileUpdate(): string
@@ -189,7 +214,7 @@ class CustomerController
         if (!$tenant) { http_response_code(404); return Router::renderError(404, 'Tenant tidak ditemukan'); }
 
         if (empty($_SESSION['customer_id']) || (int)$_SESSION['customer_tenant_id'] !== (int)$tenant['id']) {
-            Router::redirect('/login?next=' . urlencode('/akun'));
+            Router::redirect('/login?next=' . urlencode('/akun/pengaturan'));
         }
 
         $customerId = (int)$_SESSION['customer_id'];
@@ -206,7 +231,7 @@ class CustomerController
 
         if ($name === '') {
             Session::flash('Nama wajib diisi', 'error');
-            Router::redirect('/akun');
+            Router::redirect('/akun/pengaturan');
         }
 
         $data = [
@@ -214,19 +239,30 @@ class CustomerController
             'phone' => $phone !== '' ? $phone : null,
         ];
 
+        // Upload foto profil (opsional).
+        if (!empty($_FILES['avatar']['name']) && ($_FILES['avatar']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $up = Avatar::handleUpload($_FILES['avatar'], 'cust-' . $customerId);
+            if (!$up['ok']) {
+                Session::flash($up['error'], 'error');
+                Router::redirect('/akun/pengaturan');
+            }
+            $data['avatar_url'] = $up['url'];
+            $_SESSION['customer_avatar'] = $up['url'];
+        }
+
         // Ganti password (opsional): hanya kalau salah satu field password diisi.
         if ($newPw !== '' || $confirmPw !== '' || $currentPw !== '') {
             if (!password_verify($currentPw, $user['password_hash'])) {
                 Session::flash('Password saat ini salah', 'error');
-                Router::redirect('/akun');
+                Router::redirect('/akun/pengaturan');
             }
             if (strlen($newPw) < 6) {
                 Session::flash('Password baru minimal 6 karakter', 'error');
-                Router::redirect('/akun');
+                Router::redirect('/akun/pengaturan');
             }
             if ($newPw !== $confirmPw) {
                 Session::flash('Konfirmasi password baru tidak cocok', 'error');
-                Router::redirect('/akun');
+                Router::redirect('/akun/pengaturan');
             }
             $data['password_hash'] = password_hash($newPw, PASSWORD_DEFAULT);
         }
@@ -237,7 +273,7 @@ class CustomerController
         $_SESSION['customer_name'] = $name;
 
         Session::flash('Profil berhasil diperbarui');
-        Router::redirect('/akun');
+        Router::redirect('/akun/pengaturan');
     }
 
     // ===== LUPA / RESET PASSWORD =====
@@ -431,7 +467,7 @@ class CustomerController
 
         $customerId = (int)$_SESSION['customer_id'];
 
-        $customer = Database::fetch('SELECT id, name, email, phone FROM users WHERE id = ?', [$customerId]);
+        $customer = Database::fetch('SELECT id, name, email, phone, avatar_url FROM users WHERE id = ?', [$customerId]);
 
         $orders = Database::fetchAll(
             "SELECT o.*, e.title AS event_title, e.start_time, v.name AS venue_name
@@ -458,12 +494,30 @@ class CustomerController
             }
         }
 
+        // Event published untuk seksi "Event yang Kamu Simpan" (wishlist client-side).
+        $events = Database::fetchAll(
+            "SELECT e.*, v.name AS venue_name, v.address, v.lat, v.lng FROM events e
+             JOIN venues v ON e.venue_id = v.id
+             WHERE e.tenant_id = ? AND e.status = 'published' AND e.deleted_at IS NULL
+             ORDER BY e.start_time ASC",
+            [$tenant['id']]
+        );
+
+        // Statistik ringkas dari data nyata.
+        $stats = [
+            'orders'  => count($orders),
+            'tickets' => array_sum(array_map('count', $ticketsByOrder)),
+            'paid'    => count(array_filter($orders, static fn($o) => $o['status'] === 'paid')),
+        ];
+
         return View::render('public/account', [
             'title'          => 'Akun Saya — ' . $tenant['name'],
             'tenant'         => $tenant,
             'customer'       => $customer,
             'orders'         => $orders,
             'ticketsByOrder' => $ticketsByOrder,
+            'cards'          => PublicController::decorateEvents($events, $tenant),
+            'stats'          => $stats,
         ]);
     }
 

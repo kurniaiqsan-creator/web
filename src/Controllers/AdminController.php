@@ -140,6 +140,7 @@ class AdminController
         $statusInput = (string)($_POST['status'] ?? 'draft');
         $status      = in_array($statusInput, ['draft', 'published', 'cancelled'], true) ? $statusInput : 'draft';
         $capacity    = (int)($_POST['capacity'] ?? 0);
+        $category    = (string)($_POST['category'] ?? '');
 
         // Validasi minimum
         $errors = [];
@@ -164,6 +165,31 @@ class AdminController
         $settings = ['type' => $type];
         if ($type === 'general_admission') {
             $settings['capacity'] = $capacity;
+        }
+        // Kategori discovery (opsional) — hanya simpan bila valid.
+        if ($category !== '' && array_key_exists($category, View::eventCategories())) {
+            $settings['category'] = $category;
+        }
+        // Penyelenggara (opsional) — kalau kosong, frontend fallback ke nama tenant.
+        $organizer = trim((string)($_POST['organizer'] ?? ''));
+        if ($organizer !== '') {
+            $settings['organizer'] = mb_substr($organizer, 0, 120);
+        }
+        // Cover/poster event: pertahankan yang lama (edit), atau ganti bila ada upload baru.
+        if ($id) {
+            $oldEv = Database::fetch('SELECT settings FROM events WHERE id = ? AND tenant_id = ?', [(int)$id, $tenantId]);
+            $oldSettings = json_decode($oldEv['settings'] ?? '{}', true) ?: [];
+            if (!empty($oldSettings['cover'])) {
+                $settings['cover'] = $oldSettings['cover'];
+            }
+        }
+        if (!empty($_FILES['cover']['name']) && ($_FILES['cover']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $coverUp = Avatar::handleUpload($_FILES['cover'], 'event-' . ($id ?: 'new'), 'covers');
+            if (!$coverUp['ok']) {
+                Session::flash($coverUp['error'], 'error');
+                Router::redirect($id ? "/admin/events/{$id}" : '/admin/events/create');
+            }
+            $settings['cover'] = $coverUp['url'];
         }
         $startSql = $startTime !== '' ? str_replace('T', ' ', $startTime) . ':00' : null;
         $endSql   = $endTime !== ''   ? str_replace('T', ' ', $endTime)   . ':00' : null;
@@ -913,6 +939,75 @@ class AdminController
         ]);
     }
 
+    /** GET /admin/profile — halaman profil admin/staff. */
+    public function profile(): string
+    {
+        $me = Database::fetch(
+            'SELECT id, name, email, avatar_url FROM users WHERE id = ?',
+            [(int)($_SESSION['user_id'] ?? 0)]
+        );
+        if (!$me) {
+            Session::flash('User tidak ditemukan', 'error');
+            Router::redirect('/admin/dashboard');
+        }
+        return View::render('admin/profile', ['title' => 'Profil Saya', 'me' => $me]);
+    }
+
+    /** POST /admin/profile — update nama, foto, & password (opsional). */
+    public function profileSave(): never
+    {
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $user = Database::fetch('SELECT * FROM users WHERE id = ?', [$userId]);
+        if (!$user) {
+            Session::flash('User tidak ditemukan', 'error');
+            Router::redirect('/admin/dashboard');
+        }
+
+        $name = trim((string)($_POST['name'] ?? ''));
+        if ($name === '') {
+            Session::flash('Nama wajib diisi', 'error');
+            Router::redirect('/admin/profile');
+        }
+
+        $data = ['name' => $name];
+
+        // Foto profil (opsional).
+        if (!empty($_FILES['avatar']['name']) && ($_FILES['avatar']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $up = Avatar::handleUpload($_FILES['avatar'], 'user-' . $userId);
+            if (!$up['ok']) {
+                Session::flash($up['error'], 'error');
+                Router::redirect('/admin/profile');
+            }
+            $data['avatar_url'] = $up['url'];
+            $_SESSION['user_avatar'] = $up['url'];
+        }
+
+        // Ganti password (opsional).
+        $currentPw = (string)($_POST['current_password'] ?? '');
+        $newPw     = (string)($_POST['new_password'] ?? '');
+        $confirmPw = (string)($_POST['new_password_confirm'] ?? '');
+        if ($newPw !== '' || $confirmPw !== '' || $currentPw !== '') {
+            if (!password_verify($currentPw, $user['password_hash'])) {
+                Session::flash('Password saat ini salah', 'error');
+                Router::redirect('/admin/profile');
+            }
+            if (strlen($newPw) < 6) {
+                Session::flash('Password baru minimal 6 karakter', 'error');
+                Router::redirect('/admin/profile');
+            }
+            if ($newPw !== $confirmPw) {
+                Session::flash('Konfirmasi password baru tidak cocok', 'error');
+                Router::redirect('/admin/profile');
+            }
+            $data['password_hash'] = password_hash($newPw, PASSWORD_DEFAULT);
+        }
+
+        Database::update('users', $data, 'id = ?', [$userId]);
+        $_SESSION['user_name'] = $name;
+        Session::flash('Profil berhasil diperbarui');
+        Router::redirect('/admin/profile');
+    }
+
     /**
      * Validasi & simpan file logo tenant ke /uploads/branding/.
      * Return ['ok'=>bool, 'url'=>string, 'error'=>string].
@@ -1016,7 +1111,7 @@ class AdminController
 
                 // Judul situs & footer: boleh dikosongkan (= reset ke default Visi).
                 // Field di-submit selalu ada, jadi simpan apa adanya / hapus key bila kosong.
-                foreach (['site_title', 'footer_text'] as $textField) {
+                foreach (['site_title', 'footer_text', 'footer_tagline'] as $textField) {
                     $val = trim((string)($_POST[$textField] ?? ''));
                     if ($val !== '') {
                         $branding[$textField] = $val;

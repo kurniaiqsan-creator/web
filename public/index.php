@@ -126,6 +126,10 @@ $router->get('/t/{token}/qr.png', function (string $token) {
 $router->group('/admin', function (Router $r) {
     $r->get('/dashboard', [AdminController::class, 'dashboard']);
 
+    // Profil admin/staff
+    $r->get('/profile', [AdminController::class, 'profile']);
+    $r->post('/profile', [AdminController::class, 'profileSave']);
+
     // Events
     $r->get('/events', [AdminController::class, 'events']);
     $r->get('/events/create', [AdminController::class, 'eventEditor']);
@@ -220,6 +224,7 @@ $router->get('/reset-password/{token}', [CustomerController::class, 'resetForm']
 $router->post('/reset-password/{token}', [CustomerController::class, 'reset']);
 $router->get('/keluar', [CustomerController::class, 'logout']);
 $router->get('/akun', [CustomerController::class, 'account']);
+$router->get('/akun/pengaturan', [CustomerController::class, 'settings']);
 $router->post('/akun/profil', [CustomerController::class, 'profileUpdate']);
 
 // ===== PUBLIC EVENT ROUTES (single-tenant, tanpa slug) =====

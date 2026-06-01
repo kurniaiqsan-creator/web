@@ -46,10 +46,11 @@ class AuthController
 
             // --- Admin / staff / system admin ---
             if (in_array($role, ['tenant_admin', 'staff', 'system_admin'], true)) {
-                $_SESSION['user_id']   = $user['id'];
-                $_SESSION['role']      = $user['role'];
-                $_SESSION['tenant_id'] = $user['tenant_id'];
-                $_SESSION['user_name'] = $user['name'];
+                $_SESSION['user_id']     = $user['id'];
+                $_SESSION['role']        = $user['role'];
+                $_SESSION['tenant_id']   = $user['tenant_id'];
+                $_SESSION['user_name']   = $user['name'];
+                $_SESSION['user_avatar'] = $user['avatar_url'] ?? null;
 
                 Router::redirect('/admin/dashboard');
             }
@@ -60,6 +61,7 @@ class AuthController
                 $_SESSION['customer_name']      = $user['name'];
                 $_SESSION['customer_email']     = $user['email'];
                 $_SESSION['customer_tenant_id'] = (int)$user['tenant_id'];
+                $_SESSION['customer_avatar']    = $user['avatar_url'] ?? null;
 
                 // Tautkan order guest lama (email sama) ke akun ini.
                 Database::query(

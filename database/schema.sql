@@ -24,6 +24,7 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(32) NULL,
+    avatar_url VARCHAR(1024) NULL,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('tenant_admin','staff','customer','system_admin') DEFAULT 'customer',
     tenant_id BIGINT NULL,
@@ -275,7 +276,8 @@ CREATE TABLE refunds (
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ===== NOTIFICATIONS OUTBOX (email & WhatsApp) =====CREATE TABLE notifications_outbox (
+-- ===== NOTIFICATIONS OUTBOX (email & WhatsApp) =====
+CREATE TABLE notifications_outbox (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     tenant_id BIGINT NULL,
     order_id BIGINT NULL,

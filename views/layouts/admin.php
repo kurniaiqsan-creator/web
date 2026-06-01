@@ -144,16 +144,16 @@ $isActive = function (string $href) use ($currentPath): bool {
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link py-0 d-flex align-items-center gap-2" data-coreui-toggle="dropdown" href="#" role="button" aria-expanded="false">
-                        <span class="avatar avatar-md d-inline-flex align-items-center justify-content-center text-white rounded-circle brand-mark fw-semibold"
-                              style="width:36px;height:36px">
-                            <?= View::e(strtoupper(substr($_SESSION['user_name'] ?? 'A', 0, 2))) ?>
-                        </span>
+                        <?= View::avatarHtml($_SESSION['user_avatar'] ?? null, strtoupper(substr($_SESSION['user_name'] ?? 'A', 0, 2)), 36) ?>
                         <span class="d-none d-md-block fw-medium"><?= View::e($_SESSION['user_name'] ?? 'Admin') ?></span>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end pt-0">
                         <div class="dropdown-header bg-body-tertiary fw-semibold rounded-top mb-2">
                             <?= View::e($_SESSION['user_name'] ?? 'Admin') ?>
                         </div>
+                        <a class="dropdown-item" href="<?= base_url('/admin/profile') ?>">
+                            <i class="cil-user me-2"></i>Profil Saya
+                        </a>
                         <a class="dropdown-item" href="<?= base_url('/admin/settings') ?>">
                             <i class="cil-settings me-2"></i>Pengaturan
                         </a>

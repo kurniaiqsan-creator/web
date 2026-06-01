@@ -53,6 +53,18 @@ class Branding
         return $val !== '' ? $val : 'Visi — Platform Tiket';
     }
 
+    /**
+     * Tagline footer (deskripsi singkat di kolom brand footer).
+     * Dari `tenants.branding.footer_tagline`, default teks discovery.
+     */
+    public static function footerTagline(?array $tenant = null): string
+    {
+        $branding = self::resolveBranding($tenant);
+        $val = isset($branding['footer_tagline']) ? trim((string)$branding['footer_tagline']) : '';
+        return $val !== '' ? $val
+            : 'Platform penemu event lokal terbaik. Temukan, simpan, dan ikuti event seru di sekitarmu.';
+    }
+
     /** Nama tenant aktif dari session (admin area), atau '' jika tidak ada. */
     public static function tenantName(): string
     {

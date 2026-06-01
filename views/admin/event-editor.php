@@ -1,5 +1,5 @@
 <?php ob_start(); ?>
-<form method="post" id="eventForm" action="<?= base_url($event ? '/admin/events/' . $event['id'] : '/admin/events') ?>" x-data="eventEditor()" @submit="prepareSubmit">
+<form method="post" id="eventForm" enctype="multipart/form-data" action="<?= base_url($event ? '/admin/events/' . $event['id'] : '/admin/events') ?>" x-data="eventEditor()" @submit="prepareSubmit">
     <input type="hidden" name="status" x-model="form.status">
     <input type="hidden" name="layout" x-model="layoutJson">
     <input type="hidden" name="ga_tiers" x-model="gaTiersJson">
@@ -62,6 +62,39 @@
                         <div class="col-md-6" x-show="form.type === 'general_admission'">
                             <label class="form-label">Kapasitas</label>
                             <input type="number" min="0" class="form-control" name="capacity" x-model="form.capacity">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Kategori</label>
+                            <select class="form-select" name="category" x-model="form.category">
+                                <option value="">— Tidak dikategorikan —</option>
+                                <?php foreach (View::eventCategories() as $catKey => $catMeta): ?>
+                                    <option value="<?= View::e($catKey) ?>"><?= View::e($catMeta['emoji'] . ' ' . $catMeta['label']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text">Dipakai untuk filter di halaman publik /events.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Penyelenggara</label>
+                            <input class="form-control" name="organizer" x-model="form.organizer" placeholder="<?= View::e(Branding::tenantName() ?: 'Nama penyelenggara') ?>">
+                            <div class="form-text">Tampil sebagai "Diselenggarakan oleh" di popup event. Kosongkan = pakai nama tenant.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Cover / Poster Event</label>
+                            <?php $coverUrl = $event['settings']['cover'] ?? ''; ?>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded border bg-body-tertiary overflow-hidden d-flex align-items-center justify-content-center"
+                                     style="width:120px;height:80px;flex-shrink:0">
+                                    <?php if ($coverUrl !== ''): ?>
+                                        <img src="<?= base_url(View::e($coverUrl)) ?>" alt="Cover" style="width:100%;height:100%;object-fit:cover">
+                                    <?php else: ?>
+                                        <i class="cil-image text-medium-emphasis fs-3"></i>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <input type="file" class="form-control" name="cover" accept="image/png,image/jpeg,image/gif,image/webp">
+                                    <div class="form-text">PNG/JPG/GIF/WEBP, maks 2 MB. Tampil sebagai sampul di kartu & popup event.</div>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Deskripsi</label>
@@ -339,6 +372,8 @@ function eventEditor() {
             venue_id: <?= json_encode((string)($event['venue_id'] ?? '')) ?>,
             type: <?= json_encode($event ? ($event['settings']['type'] ?? 'seat_map') : 'seat_map') ?>,
             capacity: <?= json_encode((int)($event['settings']['capacity'] ?? 0)) ?>,
+            category: <?= json_encode($event['settings']['category'] ?? '') ?>,
+            organizer: <?= json_encode($event['settings']['organizer'] ?? '') ?>,
             start_time: <?= json_encode($event ? str_replace(' ', 'T', substr($event['start_time'] ?? '', 0, 16)) : '') ?>,
             end_time: <?= json_encode($event ? str_replace(' ', 'T', substr($event['end_time'] ?? '', 0, 16)) : '') ?>,
             status: <?= json_encode($event['status'] ?? 'draft') ?>,

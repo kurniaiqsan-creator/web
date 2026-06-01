@@ -12,10 +12,23 @@ class PublicController
 
     public function home(): string
     {
-        // Landing page (hero + fitur). Tenant di-pass untuk header (logo, tombol Masuk/Daftar).
+        // Beranda discovery: hero + kategori + event published terbaru.
+        $tenant = $this->defaultTenant();
+        $cards = [];
+        if ($tenant) {
+            $events = Database::fetchAll(
+                "SELECT e.*, v.name AS venue_name, v.address, v.lat, v.lng FROM events e
+                 JOIN venues v ON e.venue_id = v.id
+                 WHERE e.tenant_id = ? AND e.status = 'published' AND e.deleted_at IS NULL
+                 ORDER BY e.start_time ASC",
+                [$tenant['id']]
+            );
+            $cards = self::decorateEvents($events, $tenant);
+        }
         return View::render('public/home', [
-            'title'  => 'Visi — Platform Tiket',
-            'tenant' => $this->defaultTenant(),
+            'title'  => $tenant['name'] ?? 'Visi — Platform Tiket',
+            'tenant' => $tenant,
+            'cards'  => $cards,
         ]);
     }
 
@@ -27,14 +40,88 @@ class PublicController
             return Router::renderError(404, 'Belum ada tenant');
         }
         $events = Database::fetchAll(
-            "SELECT e.*, v.name as venue_name FROM events e
+            "SELECT e.*, v.name as venue_name, v.address, v.lat, v.lng FROM events e
              JOIN venues v ON e.venue_id = v.id
-             WHERE e.tenant_id = ? AND e.status = 'published' ORDER BY e.start_time ASC",
+             WHERE e.tenant_id = ? AND e.status = 'published' AND e.deleted_at IS NULL
+             ORDER BY e.start_time ASC",
             [$tenant['id']]
         );
         return View::render('public/tenant-home', [
-            'title' => $tenant['name'], 'tenant' => $tenant, 'events' => $events
+            'title' => $tenant['name'], 'tenant' => $tenant,
+            'cards' => self::decorateEvents($events, $tenant),
         ]);
+    }
+
+    /**
+     * Ubah baris event mentah menjadi data kartu untuk frontend (beranda & /events):
+     * kategori (dari settings JSON), alamat & koordinat venue (untuk hitung jarak
+     * di client), harga termurah, dan URL detail. Tanpa kolom DB baru.
+     *
+     * @param array<int,array<string,mixed>> $events
+     * @return array<int,array<string,mixed>>
+     */
+    public static function decorateEvents(array $events, ?array $tenant): array
+    {
+        if ($events === []) {
+            return [];
+        }
+        $cats = View::eventCategories();
+        $ids  = array_map(static fn($e) => (int)$e['id'], $events);
+        $ph   = implode(',', array_fill(0, count($ids), '?'));
+
+        // Harga termurah per event: dari seats (seat map; pakai harga kategori bila seat 0)
+        // dan dari event_inventory (general admission). Ambil yang paling murah.
+        $priceByEvent = [];
+        foreach (Database::fetchAll(
+            "SELECT s.event_id AS eid, MIN(COALESCE(NULLIF(s.price_cents,0), c.price_cents)) AS p
+             FROM seats s LEFT JOIN ticket_categories c ON c.id = s.category_id
+             WHERE s.event_id IN ($ph)
+             GROUP BY s.event_id", $ids) as $r) {
+            if ($r['p'] !== null) $priceByEvent[(int)$r['eid']] = (int)$r['p'];
+        }
+        foreach (Database::fetchAll(
+            "SELECT ei.event_id AS eid, MIN(NULLIF(c.price_cents,0)) AS p
+             FROM event_inventory ei JOIN ticket_categories c ON c.id = ei.category_id
+             WHERE ei.event_id IN ($ph)
+             GROUP BY ei.event_id", $ids) as $r) {
+            if ($r['p'] !== null) {
+                $eid = (int)$r['eid']; $p = (int)$r['p'];
+                if (!isset($priceByEvent[$eid]) || $p < $priceByEvent[$eid]) $priceByEvent[$eid] = $p;
+            }
+        }
+
+        $tenantName = $tenant['name'] ?? '';
+        $out = [];
+        foreach ($events as $e) {
+            $settings = json_decode($e['settings'] ?? '{}', true) ?: [];
+            $key = $settings['category'] ?? 'lainnya';
+            if (!isset($cats[$key])) $key = 'lainnya';
+            $eid   = (int)$e['id'];
+            $price = $priceByEvent[$eid] ?? null;
+            $out[] = [
+                'id'         => $eid,
+                'title'      => $e['title'],
+                'venue'      => $e['venue_name'] ?? '',
+                'address'    => $e['address'] ?? '',
+                'lat'        => isset($e['lat']) && $e['lat'] !== null ? (float)$e['lat'] : null,
+                'lng'        => isset($e['lng']) && $e['lng'] !== null ? (float)$e['lng'] : null,
+                'date'       => $e['start_time'] ? View::formatDate($e['start_time']) : '',
+                'startTs'    => $e['start_time'] ? (int)strtotime($e['start_time']) : 0,
+                'desc'       => $e['description'] ?? '',
+                'category'   => $key,
+                'catLabel'   => $cats[$key]['label'],
+                'color'      => $cats[$key]['color'],
+                'emoji'      => $cats[$key]['emoji'],
+                'cover'      => !empty($settings['cover']) ? base_url($settings['cover']) : null,
+                'organizer'  => !empty($settings['organizer']) ? (string)$settings['organizer'] : $tenantName,
+                'price'      => $price,
+                // Hanya tampilkan bila harga bisa ditentukan; jangan asal label "Gratis".
+                'priceShort' => $price === null ? '' : View::formatRupiah($price),
+                'priceLabel' => $price === null ? '' : 'Mulai dari ' . View::formatRupiah($price),
+                'url'        => base_url('/events/' . $eid),
+            ];
+        }
+        return $out;
     }
 
     public function eventDetail(string $eventSlug): string
