@@ -215,7 +215,6 @@ function gaPicker() {
                         <?php endif; ?>
                     </h2>
                     <div class="d-flex gap-3 small text-medium-emphasis">
-                        <span><span class="seat-legend-dot available"></span> Tersedia</span>
                         <span><span class="seat-legend-dot sold"></span> Terjual</span>
                         <span><span class="seat-legend-dot blocked"></span> Diblokir</span>
                         <span><span class="seat-legend-dot selected"></span> Dipilih</span>
@@ -234,22 +233,35 @@ function gaPicker() {
                             $rowLabels = array_keys($rows);
                             sort($rowLabels);
                             $catNames = [];
+                            $catColors = [];
+                            $palette = ['#6366f1','#ec4899','#0ea5e9','#f59e0b','#14b8a6','#a855f7','#84cc16','#ef4444','#06b6d4','#eab308'];
+                            $ci = 0;
                             foreach ($categories as $cat) {
                                 $catNames[(int)$cat['id']] = $cat['name'];
+                                $catColors[(int)$cat['id']] = $palette[$ci % count($palette)];
+                                $ci++;
                             }
                             $seatW = 26; $seatH = 26; $gap = 3;
                             foreach ($seats as $s):
-                                $catName = $catNames[(int)($s['category_id'] ?? 0)] ?? '';
+                                $cid = (int)($s['category_id'] ?? 0);
+                                $catName = $catNames[$cid] ?? '';
+                                $catColor = $catColors[$cid] ?? '';
                                 $x = ($s['col_number'] - 1) * ($seatW + $gap) + $gap + 25;
                                 $y = (array_search($s['row_label'], $rowLabels)) * ($seatH + $gap) + $gap + 10;
                                 $statusClass = 'seat-' . ($s['status'] ?? 'blocked');
+                                // Kursi available diberi warna kategori agar bisa dibedakan.
+                                $seatStyle = ($s['status'] === 'available' && $catColor !== '')
+                                    ? 'fill:' . $catColor . ';stroke:' . $catColor . ';'
+                                    : '';
                             ?>
                                 <rect x="<?= $x ?>" y="<?= $y ?>" width="<?= $seatW ?>" height="<?= $seatH ?>" rx="3"
                                       class="seat-rect <?= $statusClass ?>"
+                                      style="<?= $seatStyle ?>"
                                       data-seat="<?= View::e($s['seat_label']) ?>"
                                       data-status="<?= $s['status'] ?>"
                                       data-price="<?= $s['price_cents'] ?>"
                                       data-category="<?= View::e($catName) ?>"
+                                      data-cat-color="<?= View::e($catColor) ?>"
                                       onclick="window.seatMapInstance && window.seatMapInstance.toggleSeat('<?= View::e($s['seat_label']) ?>', <?= $s['price_cents'] ?>, '<?= $s['status'] ?>', '<?= View::e($catName) ?>', <?= (int)($s['category_id'] ?? 0) ?>)"
                                 />
                                 <text x="<?= $x + $seatW/2 ?>" y="<?= $y + $seatH/2 ?>" text-anchor="middle" dominant-baseline="central"
@@ -271,9 +283,12 @@ function gaPicker() {
                 <div class="card-body">
                     <h3 class="h6 fw-semibold mb-3">Tipe Tiket</h3>
                     <div class="d-flex flex-column gap-2">
-                        <?php foreach ($categories as $cat): ?>
+                        <?php $ci = 0; foreach ($categories as $cat): $catColor = $palette[$ci % count($palette)]; $ci++; ?>
                             <div class="d-flex justify-content-between align-items-center rounded-3 border bg-body-tertiary px-3 py-2 small">
-                                <span class="fw-medium"><?= View::e($cat['name']) ?></span>
+                                <span class="fw-medium d-flex align-items-center gap-2">
+                                    <span class="seat-legend-dot" style="background:<?= $catColor ?>"></span>
+                                    <?= View::e($cat['name']) ?>
+                                </span>
                                 <span class="text-primary fw-semibold"><?= View::formatRupiah($cat['price_cents']) ?></span>
                             </div>
                         <?php endforeach; ?>
@@ -358,6 +373,10 @@ function seatMap() {
                 document.querySelectorAll('.seat-rect[data-seat="'+label+'"]').forEach(r => {
                     r.classList.remove('seat-selected');
                     r.classList.add('seat-available');
+                    // Kembalikan warna kategori.
+                    const cc = r.getAttribute('data-cat-color');
+                    r.style.fill = cc || '';
+                    r.style.stroke = cc || '';
                 });
             } else {
                 this.selectedSeats.push({label, price, category: category || '', categoryId: categoryId || null});
@@ -365,6 +384,9 @@ function seatMap() {
                 document.querySelectorAll('.seat-rect[data-seat="'+label+'"]').forEach(r => {
                     r.classList.add('seat-selected');
                     r.classList.remove('seat-available');
+                    // Hapus warna kategori agar warna "dipilih" terlihat.
+                    r.style.fill = '';
+                    r.style.stroke = '';
                 });
             }
         },

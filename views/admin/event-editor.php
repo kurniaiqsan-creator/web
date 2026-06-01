@@ -101,22 +101,15 @@
             <div class="col-lg-8">
                 <div class="card">
                     <div class="card-body d-flex justify-content-center overflow-auto p-4">
-                        <svg :width="canvasWidth" :height="canvasHeight" class="select-none">
+                        <div class="position-relative select-none" :style="'width:' + canvasWidth + 'px;height:' + canvasHeight + 'px'">
                             <template x-for="s in layoutSeats" :key="s.label">
-                                <rect :x="s.x" :y="s.y" width="24" height="24" rx="4"
-                                      :class="{
-                                        'seat-available': s.status==='available' && !s.selected,
-                                        'seat-blocked': s.status==='blocked',
-                                        'seat-sold': s.status==='sold',
-                                        'seat-selected': s.selected
-                                      }"
-                                      @click="toggleSeat(s.label)"/>
-                                <text :x="s.x+12" :y="s.y+13" text-anchor="middle" dominant-baseline="central"
-                                      class="text-[6px] fw-semibold pointer-events-none"
-                                      :class="s.status==='available' && !s.selected ? 'fill-dark' : 'fill-white'"
-                                      x-text="s.col"></text>
+                                <div class="seat-cell d-flex align-items-center justify-content-center position-absolute"
+                                     :style="seatStyle(s)"
+                                     :title="s.label"
+                                     @click="toggleSeat(s.label)"
+                                     x-text="s.col"></div>
                             </template>
-                        </svg>
+                        </div>
                     </div>
                     <div class="text-center py-2 bg-body-tertiary rounded-bottom text-uppercase small fw-semibold text-medium-emphasis">Panggung</div>
                 </div>
@@ -151,6 +144,37 @@
                             </div>
                         </template>
                         <p x-show="selectedSeats.length===0" class="text-medium-emphasis mb-0">Klik kursi pada denah untuk memilih. Gunakan toolbar untuk bulk edit.</p>
+                    </div>
+                </div>
+
+                <!-- Legend kategori -->
+                <div class="card mt-3">
+                    <div class="card-header"><h5 class="card-title mb-0">Kategori</h5></div>
+                    <div class="card-body">
+                        <div class="d-flex flex-column gap-2">
+                            <template x-for="c in catLegend" :key="c.id">
+                                <div class="d-flex align-items-center gap-2 small">
+                                    <span class="seat-legend-dot" :style="'background:' + c.color"></span>
+                                    <span class="fw-medium" x-text="c.name"></span>
+                                </div>
+                            </template>
+                            <div class="d-flex align-items-center gap-2 small">
+                                <span class="seat-legend-dot" style="background:var(--visi-seat-available)"></span>
+                                <span class="text-medium-emphasis">Tanpa kategori</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small">
+                                <span class="seat-legend-dot blocked"></span>
+                                <span class="text-medium-emphasis">Diblokir</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small">
+                                <span class="seat-legend-dot sold"></span>
+                                <span class="text-medium-emphasis">Terjual</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small">
+                                <span class="seat-legend-dot selected"></span>
+                                <span class="text-medium-emphasis">Dipilih</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -299,6 +323,13 @@ window.__EVENT_INVENTORY__ = <?= json_encode(array_map(function($inv){
     ];
 }, $inventory ?? []), JSON_UNESCAPED_UNICODE) ?>;
 
+window.__EVENT_CATEGORIES__ = <?= json_encode(array_map(function($c){
+    return ['id' => (int)$c['id'], 'name' => $c['name']];
+}, $categories), JSON_UNESCAPED_UNICODE) ?>;
+
+// Palet warna kategori (dipakai untuk membedakan kursi per kategori di denah).
+window.__CAT_PALETTE__ = ['#6366f1','#ec4899','#0ea5e9','#f59e0b','#14b8a6','#a855f7','#84cc16','#ef4444','#06b6d4','#eab308'];
+
 function eventEditor() {
     return {
         tab: 'info',
@@ -320,8 +351,17 @@ function eventEditor() {
         addedCats: [],
         gaTiers: {},      // { [categoryId]: {quota, sold, held} }
         gaTiersJson: '[]',
+        catColors: {},    // { [categoryId]: '#hex' }
+        catNames: {},     // { [categoryId]: 'VIP' }
 
         init() {
+            // Warna per kategori (untuk membedakan kursi di denah).
+            const palette = window.__CAT_PALETTE__ || [];
+            const cats = window.__EVENT_CATEGORIES__ || [];
+            cats.forEach((c, i) => {
+                this.catColors[c.id] = palette[i % palette.length];
+                this.catNames[c.id] = c.name;
+            });
             // GA tiers dari server (edit mode).
             const inv = window.__EVENT_INVENTORY__ || [];
             const tiers = {};
@@ -330,14 +370,15 @@ function eventEditor() {
             // GA tidak punya seat map → paksa tab ke info kalau kebetulan di seatmap.
             this.$watch('form.type', (v) => { if (v === 'general_admission' && this.tab === 'seatmap') this.tab = 'info'; });
 
-            const seatW = 24, gap = 3;
+            const seatW = 28, gap = 8;
             const existing = window.__EVENT_SEATS__ || [];
             if (existing.length > 0) {
-                // Edit mode: pakai layout existing.
+                // Edit mode: pakai layout existing. (Posisi selalu dihitung ulang
+                // dari row/col agar grid rapi, abaikan x/y lama yang mungkin tak konsisten.)
                 this.layoutSeats = existing.map(s => ({
                     label: s.label, row: s.row, col: s.col,
-                    x: s.x ?? ((s.col-1)*(seatW+gap)+gap+25),
-                    y: s.y ?? (('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.indexOf(s.row))*(seatW+gap)+gap+10),
+                    x: (s.col-1)*(seatW+gap)+gap,
+                    y: ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.indexOf(s.row))*(seatW+gap)+gap,
                     category_id: s.category_id || 0,
                     status: s.status || 'available',
                     selected: false
@@ -350,8 +391,8 @@ function eventEditor() {
                     for (let col = 1; col <= 10; col++) {
                         seats.push({
                             label: row+'-'+col, row, col,
-                            x: (col-1)*(seatW+gap)+gap+25,
-                            y: ri*(seatW+gap)+gap+10,
+                            x: (col-1)*(seatW+gap)+gap,
+                            y: ri*(seatW+gap)+gap,
                             category_id: 0,
                             status: 'available',
                             selected: false
@@ -362,8 +403,8 @@ function eventEditor() {
             }
             const maxCol = this.layoutSeats.reduce((m,s)=>Math.max(m,s.col),0);
             const rowCount = new Set(this.layoutSeats.map(s=>s.row)).size;
-            this.canvasWidth  = maxCol  *(seatW+gap)+gap+50;
-            this.canvasHeight = rowCount*(seatW+gap)+gap+20;
+            this.canvasWidth  = maxCol  *(seatW+gap)+gap;
+            this.canvasHeight = rowCount*(seatW+gap)+gap;
         },
         toggleSeat(label) {
             const s = this.layoutSeats.find(s => s.label === label);
@@ -371,14 +412,40 @@ function eventEditor() {
             s.selected = !s.selected;
             this.selectedSeats = s.selected ? [...this.selectedSeats, label] : this.selectedSeats.filter(l => l !== label);
         },
+        catColor(categoryId) {
+            return this.catColors[categoryId] || null;
+        },
+        seatStyle(s) {
+            // Posisi absolut + warna sesuai status/kategori.
+            let bg, border;
+            if (s.selected) {
+                bg = 'var(--visi-seat-selected)'; border = 'var(--visi-seat-selected-stroke)';
+            } else if (s.status === 'sold') {
+                bg = 'var(--visi-seat-sold)'; border = 'var(--visi-seat-sold-stroke)';
+            } else if (s.status === 'blocked') {
+                bg = 'var(--visi-seat-blocked)'; border = 'var(--visi-seat-blocked-stroke)';
+            } else {
+                const cc = this.catColor(s.category_id);
+                bg = cc || 'var(--visi-seat-available)';
+                border = cc || 'var(--visi-seat-available-stroke)';
+            }
+            return `position:absolute;left:${s.x}px;top:${s.y}px;width:28px;height:28px;background:${bg};border-color:${border}`;
+        },
+        get catLegend() {
+            return Object.keys(this.catNames).map(id => ({
+                id: parseInt(id),
+                name: this.catNames[id],
+                color: this.catColors[id] || 'var(--visi-seat-available)'
+            }));
+        },
         addRow() {
             const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             const nextIdx = [...new Set(this.layoutSeats.map(s=>s.row))].length;
             if (nextIdx >= 26) return showToast('Maksimal 26 baris', 'error');
             const next = letters[nextIdx];
-            const seatW=24,gap=3,y=nextIdx*(seatW+gap)+gap+10;
+            const seatW=28,gap=8,y=nextIdx*(seatW+gap)+gap;
             for(let col=1;col<=10;col++) {
-                this.layoutSeats.push({label:next+'-'+col,row:next,col,x:(col-1)*(seatW+gap)+gap+25,y,category_id:2,status:'available',selected:false});
+                this.layoutSeats.push({label:next+'-'+col,row:next,col,x:(col-1)*(seatW+gap)+gap,y,category_id:0,status:'available',selected:false});
             }
             this.canvasHeight += (seatW+gap);
             showToast('Baris '+next+' ditambahkan');
@@ -386,9 +453,9 @@ function eventEditor() {
         addCol() {
             const maxCol = Math.max(...this.layoutSeats.map(s=>s.col));
             const rows = [...new Set(this.layoutSeats.map(s=>s.row))];
-            const seatW=24,gap=3;
+            const seatW=28,gap=8;
             rows.forEach((row,ri)=>{
-                this.layoutSeats.push({label:row+'-'+(maxCol+1),row,col:maxCol+1,x:maxCol*(seatW+gap)+gap+25,y:ri*(seatW+gap)+gap+10,category_id:2,status:'available',selected:false});
+                this.layoutSeats.push({label:row+'-'+(maxCol+1),row,col:maxCol+1,x:maxCol*(seatW+gap)+gap,y:ri*(seatW+gap)+gap,category_id:0,status:'available',selected:false});
             });
             this.canvasWidth += (seatW+gap);
             showToast('Kolom '+(maxCol+1)+' ditambahkan');
@@ -416,6 +483,11 @@ function eventEditor() {
                 this.addedCats.push(data);
                 // Tambahkan ke dropdown kategori (seat-map) & tier GA secara live.
                 this.gaTiers[data.id] = { quota: data.quota, sold: 0, held: 0 };
+                // Beri warna untuk kategori baru agar tampil beda di denah.
+                const palette = window.__CAT_PALETTE__ || [];
+                const usedCount = Object.keys(this.catColors).length;
+                this.catColors[data.id] = palette[usedCount % palette.length];
+                this.catNames[data.id] = data.name;
                 this.newCat = { name: '', price: '', quota: '' };
                 this.showCatForm = false;
                 showToast('Kategori "' + data.name + '" dibuat', 'success');

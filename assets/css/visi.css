@@ -145,6 +145,26 @@ body {
 .seat-legend-dot.blocked { background: var(--visi-seat-blocked); }
 .seat-legend-dot.selected { background: var(--visi-seat-selected); }
 
+/* Seat map designer (admin) — kursi berbasis div absolute. */
+.seat-cell {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  transition: filter 0.1s, transform 0.1s;
+}
+.seat-cell:hover {
+  filter: brightness(1.12);
+  transform: scale(1.08);
+}
+
 /* E-ticket card accent strip. */
 .eticket-accent {
   height: 0.5rem;
