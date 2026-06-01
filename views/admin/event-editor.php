@@ -23,13 +23,13 @@
     <!-- Tabs -->
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link" :class="tab==='info'?'active':''" @click="tab='info'"><i class="cil-info me-1"></i>Info Event</button>
+            <button type="button" class="nav-link" :class="tab==='info'?'active':''" @click="tab='info'"><i class="cil-info me-1"></i>Info Event</button>
         </li>
         <li class="nav-item" role="presentation" x-show="form.type === 'seat_map'">
-            <button class="nav-link" :class="tab==='seatmap'?'active':''" @click="tab='seatmap'"><i class="cil-grid me-1"></i>Seat Map Designer</button>
+            <button type="button" class="nav-link" :class="tab==='seatmap'?'active':''" @click="tab='seatmap'"><i class="cil-grid me-1"></i>Seat Map Designer</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" :class="tab==='tickets'?'active':''" @click="tab='tickets'"><i class="cil-tag me-1"></i>Tiket & Harga</button>
+            <button type="button" class="nav-link" :class="tab==='tickets'?'active':''" @click="tab='tickets'"><i class="cil-tag me-1"></i>Tiket & Harga</button>
         </li>
     </ul>
 
@@ -86,13 +86,13 @@
         <!-- Toolbar -->
         <div class="card mb-3">
             <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
-                <button class="btn btn-outline-secondary btn-sm" @click="addRow()"><i class="cil-plus me-1"></i>Tambah Baris</button>
-                <button class="btn btn-outline-secondary btn-sm" @click="addCol()"><i class="cil-plus me-1"></i>Tambah Kolom</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" @click="addRow()"><i class="cil-plus me-1"></i>Tambah Baris</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" @click="addCol()"><i class="cil-plus me-1"></i>Tambah Kolom</button>
                 <div class="vr mx-1 d-none d-sm-block"></div>
                 <span class="text-medium-emphasis small" x-show="selectedSeats.length > 0" x-text="selectedSeats.length + ' kursi terpilih'"></span>
                 <div class="vr mx-1 d-none d-sm-block" x-show="selectedSeats.length > 0"></div>
-                <button class="btn btn-sm btn-success" @click="bulkStatus('available')" x-show="selectedSeats.length > 0"><i class="cil-check me-1"></i>Buka</button>
-                <button class="btn btn-sm btn-danger" @click="bulkStatus('blocked')" x-show="selectedSeats.length > 0"><i class="cil-ban me-1"></i>Blokir</button>
+                <button type="button" class="btn btn-sm btn-success" @click="bulkStatus('available')" x-show="selectedSeats.length > 0"><i class="cil-check me-1"></i>Buka</button>
+                <button type="button" class="btn btn-sm btn-danger" @click="bulkStatus('blocked')" x-show="selectedSeats.length > 0"><i class="cil-ban me-1"></i>Blokir</button>
             </div>
         </div>
 
