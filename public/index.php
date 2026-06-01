@@ -96,6 +96,10 @@ $router->get('/login', function () {
 });
 
 $router->post('/login', function () {
+    // Anti brute-force: maksimum 10 percobaan login / menit per IP.
+    if (!RateLimiter::enforce('login', 10, 60)) {
+        exit;
+    }
     return (new AuthController())->login();
 });
 
@@ -173,6 +177,13 @@ $router->group('/admin', function (Router $r) {
 }, [adminMiddleware(...), tenantMiddleware(...)]);
 
 // ===== API ROUTES (harus sebelum /{tenantSlug}) =====
+// Rate limit: 120 request / menit per IP untuk seluruh API publik.
+$apiRateLimit = function (): void {
+    if (!RateLimiter::enforce('api', 120, 60)) {
+        exit;
+    }
+};
+
 $router->group('/api/v1', function (Router $r) {
     $r->post('/tenants', [ApiController::class, 'createTenant']);
     $r->post('/seat-holds', [ApiController::class, 'createSeatHold']);
@@ -184,10 +195,16 @@ $router->group('/api/v1', function (Router $r) {
     $r->post('/tickets/validate', [ApiController::class, 'validateTicket']);
     $r->get('/orders/{id}', [ApiController::class, 'getOrder']);
     $r->get('/events/{id}/seats', [ApiController::class, 'getEventSeats']);
-});
+}, [$apiRateLimit]);
 
 // ===== WEBHOOK (harus sebelum /{tenantSlug}) =====
-$router->post('/webhooks/payment', [ApiController::class, 'paymentWebhook']);
+// Rate limit lebih longgar untuk webhook PG (retry/burst wajar), tetap ada batas.
+$router->post('/webhooks/payment', function () {
+    if (!RateLimiter::enforce('webhook', 300, 60)) {
+        exit;
+    }
+    return (new ApiController())->paymentWebhook();
+});
 
 // ===== CUSTOMER ACCOUNT (single-tenant, tanpa slug) =====
 // Login terpadu: /masuk lama diarahkan ke /login (satu pintu admin + customer).

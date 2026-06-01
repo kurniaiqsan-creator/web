@@ -161,3 +161,25 @@ body {
   flex-direction: column;
   gap: 0.5rem;
 }
+
+/* Promo banner — kontras jelas di light & dark (hindari teks abu-abu di atas tint). */
+.visi-promo {
+  border: 1px solid rgba(var(--cui-primary-rgb), 0.35);
+  background: rgba(var(--cui-primary-rgb), 0.08);
+  border-radius: var(--cui-border-radius, 0.5rem);
+  padding: 0.75rem 1rem;
+}
+.visi-promo .visi-promo-title {
+  color: var(--cui-primary);
+  font-weight: 600;
+}
+.visi-promo .visi-promo-hint {
+  color: var(--cui-body-color);
+  opacity: 0.75;
+}
+/* Badge kode promo: solid brand, teks putih, selalu terbaca. */
+.visi-promo .visi-promo-code {
+  background: var(--cui-primary);
+  color: #fff;
+  font-weight: 500;
+}

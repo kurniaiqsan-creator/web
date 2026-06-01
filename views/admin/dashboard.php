@@ -5,7 +5,7 @@
             <h1 class="fs-3 fw-bold mb-1">Dashboard</h1>
             <p class="text-medium-emphasis mb-0">Selamat datang, <?= View::e($_SESSION['user_name'] ?? 'Admin') ?></p>
         </div>
-        <a href="/admin/events/create" class="btn btn-primary"><i class="cil-plus me-1"></i> Buat Event</a>
+        <a href="<?= base_url('/admin/events/create') ?>" class="btn btn-primary"><i class="cil-plus me-1"></i> Buat Event</a>
     </div>
 
     <!-- KPI Cards -->
@@ -105,7 +105,7 @@
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Pesanan Terbaru</h5>
-            <a href="/admin/orders" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
+            <a href="<?= base_url('/admin/orders') ?>" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -139,7 +139,7 @@
                                 </td>
                                 <td class="d-none d-md-table-cell text-medium-emphasis small"><?= date('d M Y H:i', strtotime($o['created_at'])) ?></td>
                                 <td class="text-end">
-                                    <a href="/admin/orders?detail=<?= $o['id'] ?>" class="btn btn-sm btn-ghost-primary"><i class="cil-search"></i></a>
+                                    <a href="<?= base_url('/admin/orders?detail=' . $o['id']) ?>" class="btn btn-sm btn-ghost-primary"><i class="cil-search"></i></a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

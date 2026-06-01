@@ -5,7 +5,7 @@
             <h1 class="fs-3 fw-bold mb-1">Event</h1>
             <p class="text-medium-emphasis mb-0">Kelola semua event kamu</p>
         </div>
-        <a href="/admin/events/create" class="btn btn-primary"><i class="cil-plus me-1"></i> Buat Event</a>
+        <a href="<?= base_url('/admin/events/create') ?>" class="btn btn-primary"><i class="cil-plus me-1"></i> Buat Event</a>
     </div>
 
     <div class="card">
@@ -31,7 +31,7 @@
                                     <span class="badge bg-<?= $e['status']==='published'?'success':'secondary' ?>"><?= $e['status']==='published'?'Published':'Draft' ?></span>
                                 </td>
                                 <td class="text-end pe-4">
-                                    <a href="/admin/events/<?= $e['id'] ?>" class="btn btn-sm btn-outline-primary me-1"><i class="cil-pencil me-1"></i>Edit</a>
+                                    <a href="<?= base_url('/admin/events/' . $e['id']) ?>" class="btn btn-sm btn-outline-primary me-1"><i class="cil-pencil me-1"></i>Edit</a>
                                     <a href="<?= base_url('/events/' . $e['id']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="cil-external-link me-1"></i>View</a>
                                 </td>
                             </tr>

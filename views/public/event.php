@@ -19,19 +19,19 @@
     </div>
 
     <?php if (!empty($activePromos)): ?>
-        <div class="alert alert-primary d-flex flex-wrap align-items-center gap-2 mb-4">
-            <i class="cil-gift fs-5"></i>
-            <span class="fw-semibold me-2">Promo aktif:</span>
+        <div class="visi-promo d-flex flex-wrap align-items-center gap-2 mb-4">
+            <i class="cil-gift fs-5 visi-promo-title"></i>
+            <span class="visi-promo-title me-2">Promo aktif:</span>
             <?php foreach ($activePromos as $p):
                 $label = $p['type'] === 'percentage'
                     ? ('Diskon ' . rtrim(rtrim(number_format((float)$p['value'], 2, '.', ''), '0'), '.') . '%')
                     : ('Potongan ' . View::formatRupiah((int)round((float)$p['value'])));
             ?>
-                <span class="badge bg-primary me-1" title="Berlaku s/d <?= View::e(date('d M Y', strtotime($p['valid_to']))) ?>">
+                <span class="badge visi-promo-code me-1" title="Berlaku s/d <?= View::e(date('d M Y', strtotime($p['valid_to']))) ?>">
                     <span class="font-monospace"><?= View::e($p['code']) ?></span> · <?= View::e($label) ?>
                 </span>
             <?php endforeach; ?>
-            <span class="small text-medium-emphasis w-100 mt-1">Masukkan kode promo saat checkout.</span>
+            <span class="small visi-promo-hint w-100 mt-1">Masukkan kode promo saat checkout.</span>
         </div>
     <?php endif; ?>
 
@@ -185,19 +185,19 @@ function gaPicker() {
     </div>
 
     <?php if (!empty($activePromos)): ?>
-        <div class="alert alert-primary d-flex flex-wrap align-items-center gap-2 mb-4">
-            <i class="cil-gift fs-5"></i>
-            <span class="fw-semibold me-2">Promo aktif:</span>
+        <div class="visi-promo d-flex flex-wrap align-items-center gap-2 mb-4">
+            <i class="cil-gift fs-5 visi-promo-title"></i>
+            <span class="visi-promo-title me-2">Promo aktif:</span>
             <?php foreach ($activePromos as $p):
                 $label = $p['type'] === 'percentage'
                     ? ('Diskon ' . rtrim(rtrim(number_format((float)$p['value'], 2, '.', ''), '0'), '.') . '%')
                     : ('Potongan ' . View::formatRupiah((int)round((float)$p['value'])));
             ?>
-                <span class="badge bg-primary me-1" title="Berlaku s/d <?= View::e(date('d M Y', strtotime($p['valid_to']))) ?>">
+                <span class="badge visi-promo-code me-1" title="Berlaku s/d <?= View::e(date('d M Y', strtotime($p['valid_to']))) ?>">
                     <span class="font-monospace"><?= View::e($p['code']) ?></span> · <?= View::e($label) ?>
                 </span>
             <?php endforeach; ?>
-            <span class="small text-medium-emphasis w-100 mt-1">Masukkan kode promo saat checkout.</span>
+            <span class="small visi-promo-hint w-100 mt-1">Masukkan kode promo saat checkout.</span>
         </div>
     <?php endif; ?>
 
