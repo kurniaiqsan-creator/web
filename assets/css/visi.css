@@ -265,12 +265,15 @@ body {
 }
 .event-save-btn:hover { background: #fff; }
 
-/* Hero beranda — gradient brand, kontras putih. */
+/* Hero beranda — gradient brand, kontras putih.
+   Pakai warna brand solid + overlay transparan (tanpa color-mix) agar
+   kompatibel di semua browser. */
 .visi-hero {
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--cui-primary) 78%, #000) 0%,
-    var(--cui-primary) 55%,
-    color-mix(in srgb, var(--cui-primary) 70%, #fff) 100%);
+  background-color: var(--cui-primary);
+  background-image: linear-gradient(135deg,
+    rgba(0, 0, 0, 0.30) 0%,
+    rgba(0, 0, 0, 0) 45%,
+    rgba(255, 255, 255, 0.18) 100%);
   border-radius: 1.5rem;
 }
 .visi-hero-decor {
